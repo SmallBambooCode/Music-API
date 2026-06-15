@@ -1,39 +1,74 @@
-# Meting Enhanced Vercel v4
+# Meting Enhanced Vercel v5
 
 一个可以部署到 Vercel 的 Meting-API 兼容适配层。
 
-v4 重点改动：
+## v5 修复内容
 
-- 白名单**只能从 Vercel 环境变量 `ALLOWLIST` 设置**。
-- `/admin` 页面不再支持新增、删除、保存白名单。
-- `/admin` 页面只保留一个测试开关：管理员密码正确后，可以**临时关闭/重新开启白名单**。
-- 这个临时开关只保存在当前 Serverless 运行实例内，重新部署、冷启动、实例回收或区域切换后可能自动恢复。
-- 保留 v3 的播放 URL 回退机制：`METING_FALLBACK_API` + `URL_PROVIDER`。
+- 管理员接口 `/admin/allowlist`、`/admin/status` 绕过来源白名单，但仍要求 `ADMIN_PASSWORD`。
+- 管理页使用相对路径请求，增加错误输出，不再出现“点了没反应但不知道为什么”。
+- `NCM_COOKIE` 支持拆成 `NCM_MUSIC_U` 和 `NCM_CSRF`，避免 Vercel Import `.env` 时被分号/空格影响。
+- 播放 URL 增强：自动多音质尝试 `NCM_LEVELS`。
+- 播放 URL 回退：支持 `METING_FALLBACK_API`，可设置 `URL_PROVIDER=fallback-first` 或 `fallback-only`。
+- `/health` 会返回环境变量是否存在、Cookie 长度、白名单数量、fallback 是否配置等诊断信息，不泄露具体密钥。
 
 ## 重要说明
 
-这个项目不是“绕过会员/版权限制”的工具。`NCM_COOKIE` 只用于让上游接口按你的账号状态返回可访问资源。如果你的账号没有某首歌/某个音质的权限，上游可能仍然不会返回可播放 URL。
+这个项目不是“绕过会员/版权限制”的工具。`NCM_MUSIC_U` / `NCM_COOKIE` 只用于让上游接口按你自己的账号状态返回可访问资源。如果你的账号没有某首歌或某个音质的权限，上游可能仍然不会返回可播放 URL。
 
-## 快速部署到 Vercel
+## Vercel 环境变量
 
-1. 解压本项目。
-2. 上传到 GitHub。
-3. 在 Vercel 导入仓库并 Deploy。
-4. 在 Vercel Project Settings → Environment Variables 配置环境变量。
-5. 修改环境变量后，必须 Redeploy。
+推荐导入：
 
-## 推荐环境变量
-
-```bash
-NCM_COOKIE=MUSIC_U=你的值; __csrf=你的值; os=pc
-NCM_LEVEL=exhigh
+```env
+NCM_MUSIC_U=你的 MUSIC_U
+NCM_CSRF=你的 __csrf
+NCM_LEVEL=standard
+NCM_LEVELS=standard,higher,exhigh,lossless
 ALLOWLIST=yuncan.xyz,*.yuncan.xyz
-ADMIN_PASSWORD=换成一个长密码
+ADMIN_PASSWORD=换成你的管理员密码
 CACHE_TTL_JSON=300
-CACHE_TTL_URL=60
+CACHE_TTL_URL=45
+METING_FALLBACK_API=https://你原先的-meting-api-域名/api
+URL_PROVIDER=fallback-first
+ALLOWLIST_DISABLED_DEFAULT=false
+DEBUG_RESPONSE=0
+```
+
+如果你没有旧 Meting API，就先留空：
+
+```env
+METING_FALLBACK_API=
+URL_PROVIDER=enhanced-then-fallback
+```
+
+如果你原来的 Meting API 播放最稳，强烈建议：
+
+```env
 METING_FALLBACK_API=https://你原先的-meting-api-域名/api
 URL_PROVIDER=fallback-first
 ```
+
+## 部署后必须 Redeploy
+
+Vercel 的环境变量修改只对新部署生效。修改或导入变量后，需要在 Deployments 里 Redeploy 最新部署。
+
+## 管理员页面
+
+访问：
+
+```text
+https://你的-vercel-域名.vercel.app/admin
+```
+
+输入 `ADMIN_PASSWORD` 后可以：
+
+- 读取当前环境变量白名单
+- 查看当前请求来源与 IP
+- 查看环境变量诊断状态
+- 临时关闭白名单
+- 重新开启白名单
+
+注意：临时关闭白名单不是持久化设置。它只存在于当前 Vercel Serverless 实例的内存里，用于测试接口是否被白名单挡住。测试完请重新开启。
 
 ## 白名单规则
 
@@ -53,33 +88,9 @@ https://yuncan.xyz
 120.85.43.0/24
 ```
 
-未命中白名单的请求会返回：
+未命中白名单的 API 请求会返回 403。
 
-```json
-{
-  "error": "forbidden",
-  "message": "Request source is not in allowlist."
-}
-```
-
-## 管理员页面
-
-访问：
-
-```text
-https://你的-vercel-域名.vercel.app/admin
-```
-
-输入 `ADMIN_PASSWORD` 后可以：
-
-- 读取当前环境变量白名单
-- 查看当前请求来源与 IP
-- 临时关闭白名单
-- 重新开启白名单
-
-注意：临时关闭白名单不是持久化设置。它只存在于当前 Vercel Serverless 实例的内存里，用于测试接口是否被白名单挡住。测试完请重新开启。
-
-## Meting API 兼容接口
+## 接口
 
 ### 单曲
 
@@ -91,18 +102,6 @@ https://你的-vercel-域名.vercel.app/admin
 
 ```text
 /api?server=netease&type=playlist&id=6907557348&limit=50
-```
-
-### 搜索
-
-```text
-/api?server=netease&type=search&id=关键词
-```
-
-### 歌手热门歌曲
-
-```text
-/api?server=netease&type=artist&id=12441107
 ```
 
 ### 歌词
@@ -117,73 +116,39 @@ https://你的-vercel-域名.vercel.app/admin
 /api?server=netease&type=pic&id=473403185
 ```
 
-### 播放地址
-
-默认 302 跳转到音频 URL：
-
-```text
-/api?server=netease&type=url&id=473403185
-```
-
-调试时可以返回 JSON：
+### 播放地址诊断
 
 ```text
 /api?server=netease&type=url&id=473403185&json=1
 ```
 
-## MetingJS 使用示例
+返回示例：
+
+```json
+{
+  "url": "https://...",
+  "meta": {
+    "provider": "meting-fallback"
+  }
+}
+```
+
+如果失败，会返回 `detail.attempts`，用于判断是 Cookie、音质、fallback 还是白名单的问题。
+
+## MetingJS 用法
 
 ```html
 <meting-js
   server="netease"
   type="playlist"
-  id="6907557348"
+  id="你的歌单ID"
   api="https://你的-vercel-域名.vercel.app/api?server=:server&type=:type&id=:id&auth=:auth&r=:r">
 </meting-js>
 ```
 
-## 播放 URL 回退机制
-
-如果你原先的 Meting-API 能播放普通歌曲，但新版 api-enhanced 拿不到 URL，可以配置：
-
-```bash
-METING_FALLBACK_API=https://你原先的-meting-api-域名/api
-URL_PROVIDER=fallback-first
-```
-
-`URL_PROVIDER` 可选：
-
-```text
-enhanced-then-fallback   # 默认：先用 api-enhanced，失败再走旧 Meting-API
-fallback-first           # 播放 URL 优先走旧 Meting-API，歌单/歌词/封面仍走新接口
-```
-
-如果你现在最怕再不能播放，建议先设置：
-
-```bash
-URL_PROVIDER=fallback-first
-```
-
-## 增强接口透传
-
-也可以访问 api-enhanced 风格的路径：
-
-```text
-/enhanced/song/url/v1?id=473403185&level=exhigh
-/enhanced/song/detail?ids=473403185
-/enhanced/lyric?id=473403185
-```
-
-同样不会透传 `unblock=true`。
-
-## 本地开发
+## 本地语法检查
 
 ```bash
 npm install
 npm run lint:syntax
-npx vercel dev
 ```
-
-## 紧急回滚
-
-如果部署后播放异常，把前端 MetingJS 的 `api` 改回你原先的 Meting-API 地址即可立刻恢复。不要先删旧项目。
