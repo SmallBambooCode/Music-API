@@ -1,11 +1,16 @@
 {
-    "env": {
-        "RUNTIME": "vercel"
-    },
-    "rewrites": [
-        {
-            "source": "/(.*)",
-            "destination": "/api"
-        }
-    ]
+  "version": 2,
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 15
+    }
+  },
+  "rewrites": [
+    { "source": "/", "destination": "/api/index" },
+    { "source": "/test", "destination": "/api/index" },
+    { "source": "/health", "destination": "/api/index" },
+    { "source": "/admin", "destination": "/api/index" },
+    { "source": "/admin/:path*", "destination": "/api/index" },
+    { "source": "/enhanced/:path*", "destination": "/api/index" }
+  ]
 }
