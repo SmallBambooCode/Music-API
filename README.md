@@ -1,154 +1,56 @@
-# Meting Enhanced Vercel v5
+# Meting Enhanced Vercel v6
 
-一个可以部署到 Vercel 的 Meting-API 兼容适配层。
+这是一个兼容 Meting-API 输出格式的 Vercel Serverless 适配层。
 
-## v5 修复内容
+## v6 修复点
 
-- 管理员接口 `/admin/allowlist`、`/admin/status` 绕过来源白名单，但仍要求 `ADMIN_PASSWORD`。
-- 管理页使用相对路径请求，增加错误输出，不再出现“点了没反应但不知道为什么”。
-- `NCM_COOKIE` 支持拆成 `NCM_MUSIC_U` 和 `NCM_CSRF`，避免 Vercel Import `.env` 时被分号/空格影响。
-- 播放 URL 增强：自动多音质尝试 `NCM_LEVELS`。
-- 播放 URL 回退：支持 `METING_FALLBACK_API`，可设置 `URL_PROVIDER=fallback-first` 或 `fallback-only`。
-- `/health` 会返回环境变量是否存在、Cookie 长度、白名单数量、fallback 是否配置等诊断信息，不泄露具体密钥。
-
-## 重要说明
-
-这个项目不是“绕过会员/版权限制”的工具。`NCM_MUSIC_U` / `NCM_COOKIE` 只用于让上游接口按你自己的账号状态返回可访问资源。如果你的账号没有某首歌或某个音质的权限，上游可能仍然不会返回可播放 URL。
+- 管理员页面不再请求 `/admin/allowlist`，改为静态页面 `/admin/` 调用单一函数 `/api?action=admin-status`。
+- 管理员开关和播放 API 都在同一个 `/api` Serverless 函数内，临时关闭白名单的内存状态能影响同一个运行实例内的 API 请求。
+- 白名单只从 Vercel 环境变量 `ALLOWLIST` 读取，不支持网页增删。
+- 播放地址支持旧 Meting-API 回退：`METING_FALLBACK_API` + `URL_PROVIDER=fallback-first`。
+- Cookie 拆分为 `NCM_MUSIC_U`、`NCM_CSRF`，避免 `.env` 导入时分号和空格解析问题。
 
 ## Vercel 环境变量
 
-推荐导入：
+建议导入：
 
 ```env
-NCM_MUSIC_U=你的 MUSIC_U
-NCM_CSRF=你的 __csrf
+NCM_MUSIC_U=...
+NCM_CSRF=...
 NCM_LEVEL=standard
 NCM_LEVELS=standard,higher,exhigh,lossless
-ALLOWLIST=yuncan.xyz,*.yuncan.xyz
-ADMIN_PASSWORD=换成你的管理员密码
+ALLOWLIST=yuncan.xyz,*.yuncan.xyz,localhost,127.0.0.1
+ADMIN_PASSWORD=...
+ALLOWLIST_DISABLED_DEFAULT=false
 CACHE_TTL_JSON=300
 CACHE_TTL_URL=45
-METING_FALLBACK_API=https://你原先的-meting-api-域名/api
+METING_FALLBACK_API=https://你原先的旧MetingAPI域名/api
 URL_PROVIDER=fallback-first
-ALLOWLIST_DISABLED_DEFAULT=false
 DEBUG_RESPONSE=0
 ```
 
-如果你没有旧 Meting API，就先留空：
+> 注意：如果不设置 `METING_FALLBACK_API`，播放地址只能走 enhanced 上游；如果你的旧 Meting-API 原本能播，务必把旧接口 base URL 填进去。
 
-```env
-METING_FALLBACK_API=
-URL_PROVIDER=enhanced-then-fallback
-```
+## 入口
 
-如果你原来的 Meting API 播放最稳，强烈建议：
+- 管理页：`/admin/`
+- 健康检查：`/api?action=health`
+- Meting 兼容 API：`/api?server=netease&type=playlist&id=...`
+- 播放地址测试：`/api?server=netease&type=url&id=歌曲ID&json=1`
 
-```env
-METING_FALLBACK_API=https://你原先的-meting-api-域名/api
-URL_PROVIDER=fallback-first
-```
-
-## 部署后必须 Redeploy
-
-Vercel 的环境变量修改只对新部署生效。修改或导入变量后，需要在 Deployments 里 Redeploy 最新部署。
-
-## 管理员页面
-
-访问：
-
-```text
-https://你的-vercel-域名.vercel.app/admin
-```
-
-输入 `ADMIN_PASSWORD` 后可以：
-
-- 读取当前环境变量白名单
-- 查看当前请求来源与 IP
-- 查看环境变量诊断状态
-- 临时关闭白名单
-- 重新开启白名单
-
-注意：临时关闭白名单不是持久化设置。它只存在于当前 Vercel Serverless 实例的内存里，用于测试接口是否被白名单挡住。测试完请重新开启。
-
-## 白名单规则
-
-`ALLOWLIST` 支持逗号分隔或换行分隔：
-
-```text
-yuncan.xyz,*.yuncan.xyz,124.221.251.223,120.85.43.0/24
-```
-
-支持格式：
-
-```text
-yuncan.xyz
-https://yuncan.xyz
-*.yuncan.xyz
-124.221.251.223
-120.85.43.0/24
-```
-
-未命中白名单的 API 请求会返回 403。
-
-## 接口
-
-### 单曲
-
-```text
-/api?server=netease&type=song&id=473403185
-```
-
-### 歌单
-
-```text
-/api?server=netease&type=playlist&id=6907557348&limit=50
-```
-
-### 歌词
-
-```text
-/api?server=netease&type=lrc&id=473403185
-```
-
-### 封面
-
-```text
-/api?server=netease&type=pic&id=473403185
-```
-
-### 播放地址诊断
-
-```text
-/api?server=netease&type=url&id=473403185&json=1
-```
-
-返回示例：
-
-```json
-{
-  "url": "https://...",
-  "meta": {
-    "provider": "meting-fallback"
-  }
-}
-```
-
-如果失败，会返回 `detail.attempts`，用于判断是 Cookie、音质、fallback 还是白名单的问题。
-
-## MetingJS 用法
+## MetingJS 示例
 
 ```html
 <meting-js
   server="netease"
   type="playlist"
-  id="你的歌单ID"
+  id="6907557348"
   api="https://你的-vercel-域名.vercel.app/api?server=:server&type=:type&id=:id&auth=:auth&r=:r">
 </meting-js>
 ```
 
-## 本地语法检查
+## 重要说明
 
-```bash
-npm install
-npm run lint:syntax
-```
+- 修改 Vercel 环境变量后必须 Redeploy 当前 Production/Preview 部署。
+- `MUSIC_U` 是账号登录态，不要提交到 GitHub。
+- 本项目不绕过会员或版权限制。`NCM_COOKIE`/`NCM_MUSIC_U` 只用于请求账号本身有权限访问的内容。

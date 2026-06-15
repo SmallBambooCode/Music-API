@@ -4,13 +4,5 @@
     "api/index.js": {
       "maxDuration": 20
     }
-  },
-  "rewrites": [
-    { "source": "/", "destination": "/api/index" },
-    { "source": "/test", "destination": "/api/index" },
-    { "source": "/health", "destination": "/api/index" },
-    { "source": "/admin", "destination": "/api/index" },
-    { "source": "/admin/:path*", "destination": "/api/index" },
-    { "source": "/enhanced/:path*", "destination": "/api/index" }
-  ]
+  }
 }

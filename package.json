@@ -1,12 +1,11 @@
 {
   "name": "meting-enhanced-vercel",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
-  "description": "Meting-API compatible Vercel adapter with api-enhanced backend, env-only allowlist, admin runtime switch, split NCM cookie env, and Meting URL fallback.",
+  "description": "Meting-API compatible Vercel adapter with env-only allowlist, single-function admin runtime switch, split NCM cookie env, and legacy Meting URL fallback.",
   "main": "api/index.js",
   "scripts": {
     "dev": "vercel dev",
-    "start": "node api/index.js",
     "lint:syntax": "node -c api/index.js && node -c lib/meting.js && node -c lib/ncm.js && node -c lib/http.js && node -c lib/allowlist.js && node -c lib/cache.js"
   },
   "engines": {
