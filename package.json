@@ -1,8 +1,8 @@
 {
   "name": "meting-enhanced-vercel",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
-  "description": "Meting-API compatible Vercel adapter with env-only allowlist, single-function admin runtime switch, split NCM cookie env, and legacy Meting URL fallback.",
+  "description": "Meting-API compatible Vercel adapter with api-enhanced, env-only allowlist, admin form feedback, and Meting-compatible outer-url playback fallback.",
   "main": "api/index.js",
   "scripts": {
     "dev": "vercel dev",

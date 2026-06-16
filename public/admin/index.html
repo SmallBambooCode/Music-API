@@ -3,29 +3,50 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Meting Enhanced Admin</title>
+  <title>Meting Enhanced Admin v7</title>
   <style>
     body{font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:960px;margin:42px auto;padding:0 20px;line-height:1.65;color:#18181b;background:#fafafa}
     .card{background:white;border:1px solid #e4e4e7;border-radius:16px;padding:20px;margin:16px 0;box-shadow:0 10px 30px rgba(0,0,0,.04)}
-    input,button{font:inherit} input{width:100%;padding:12px;border:1px solid #d4d4d8;border-radius:10px;box-sizing:border-box} button{padding:10px 16px;border:0;border-radius:10px;background:#18181b;color:white;cursor:pointer;margin-right:8px;margin-top:10px} button.secondary{background:#52525b} button.danger{background:#b91c1c} button.okbtn{background:#047857} code{background:#f4f4f5;padding:2px 6px;border-radius:6px} pre{background:#18181b;color:#fafafa;padding:16px;border-radius:12px;overflow:auto;white-space:pre-wrap}.muted{color:#71717a}.ok{color:#047857}.err{color:#b91c1c}.warn{color:#b45309}
+    input,button{font:inherit} input{width:100%;padding:12px;border:1px solid #d4d4d8;border-radius:10px;box-sizing:border-box} button{padding:10px 16px;border:0;border-radius:10px;background:#18181b;color:white;cursor:pointer;margin-right:8px;margin-top:10px} button.secondary{background:#52525b} button.danger{background:#b91c1c} button.okbtn{background:#047857} code{background:#f4f4f5;padding:2px 6px;border-radius:6px} pre{background:#18181b;color:#fafafa;padding:16px;border-radius:12px;overflow:auto;white-space:pre-wrap}.muted{color:#71717a}.ok{color:#047857}.err{color:#b91c1c}.warn{color:#b45309}.row{display:flex;gap:8px;flex-wrap:wrap}.row form{display:inline}
   </style>
 </head>
 <body>
-  <h1>管理员测试开关 v6</h1>
+  <h1>管理员测试开关 v7</h1>
   <div class="card">
     <p>白名单只从 Vercel 环境变量 <code>ALLOWLIST</code> 读取；本页面不支持网页增删白名单。</p>
-    <p>v6 不再调用 <code>/admin/allowlist</code>。所有管理请求都走同一个函数：<code>/api?action=admin-status</code> 或 <code>/api?action=admin-toggle</code>。</p>
+    <p>v7 管理页同时提供 <strong>普通 HTML 表单</strong> 和 JS 请求。即使 JS 出问题，提交表单也会直接打开 JSON 结果，能明确看到“密码错误 / 变量没读到 / 状态成功”。</p>
   </div>
   <div class="card">
     <label>管理员密码</label>
     <input id="password" type="password" autocomplete="current-password" placeholder="ADMIN_PASSWORD" />
-    <p>
+    <p class="row">
       <button id="statusBtn" type="button">读取状态</button>
       <button id="disableBtn" type="button" class="danger">临时关闭白名单</button>
       <button id="enableBtn" type="button" class="okbtn">重新开启白名单</button>
-      <button id="healthBtn" type="button" class="secondary">读取公开健康检查</button>
+      <button id="healthBtn" type="button" class="secondary">公开健康检查</button>
     </p>
-    <p id="msg" class="muted">页面已加载。请输入管理员密码后点击按钮。</p>
+    <p id="msg" class="muted">页面已加载。请输入管理员密码后点击按钮；若仍无反馈，用下面的表单直达 JSON。</p>
+  </div>
+  <div class="card">
+    <h2>无 JS 兜底表单</h2>
+    <p>这些表单会直接跳转到 <code>/api</code> 返回 JSON，最适合排错。</p>
+    <form action="/api" method="get">
+      <input type="hidden" name="action" value="admin-status" />
+      <input name="password" placeholder="ADMIN_PASSWORD" />
+      <button type="submit">表单读取状态</button>
+    </form>
+    <form action="/api" method="get">
+      <input type="hidden" name="action" value="admin-toggle" />
+      <input type="hidden" name="disabled" value="true" />
+      <input name="password" placeholder="ADMIN_PASSWORD" />
+      <button class="danger" type="submit">表单关闭白名单</button>
+    </form>
+    <form action="/api" method="get">
+      <input type="hidden" name="action" value="admin-toggle" />
+      <input type="hidden" name="disabled" value="false" />
+      <input name="password" placeholder="ADMIN_PASSWORD" />
+      <button class="okbtn" type="submit">表单开启白名单</button>
+    </form>
   </div>
   <div class="card"><h2>环境变量白名单</h2><pre id="rules">等待读取...</pre></div>
   <div class="card"><h2>运行状态</h2><pre id="status">等待读取...</pre></div>
@@ -36,7 +57,7 @@
   function show(text, cls){ const el=$('msg'); el.className=cls||'muted'; el.textContent=text; }
   function render(data){
     $('status').textContent = JSON.stringify(data, null, 2);
-    $('rules').textContent = (data.rules || []).join('\n') || '(ALLOWLIST 未配置，白名单开启时所有 API 请求都会被拒绝)';
+    $('rules').textContent = (data.rules || []).join('\n') || '(ALLOWLIST 未配置，白名单开启时 API 请求会被拒绝；管理员接口不受白名单限制)';
     if (data.ok === false || data.error) return show(data.message || data.error || '请求失败', 'err');
     const disabled = data.runtimeSwitch && data.runtimeSwitch.disabled;
     show(disabled ? '白名单当前已临时关闭。测试完请重新开启。' : '白名单当前已开启。', disabled ? 'warn' : 'ok');
@@ -48,17 +69,17 @@
       const res = await fetch(url, { cache:'no-store', signal: ctrl.signal, ...options });
       const text = await res.text();
       let data;
-      try { data = JSON.parse(text); } catch(e) { data = { ok:false, error:'non_json_response', status:res.status, body:text.slice(0, 1200) }; }
+      try { data = JSON.parse(text); } catch(e) { data = { ok:false, error:'non_json_response', status:res.status, body:text.slice(0, 2000) }; }
       data.httpStatus = res.status; data.httpOk = res.ok;
       return data;
     } finally { clearTimeout(timer); }
   }
   async function loadStatus(){
-    try { show('读取中...', 'muted'); render(await requestJson('/api?action=admin-status', { headers:{ 'Authorization':'Bearer '+password(), 'X-Admin-Password':password() } })); }
-    catch(e) { show(e.name === 'AbortError' ? '请求超时：/api 没响应，通常是部署还没生效或函数报错。' : '请求失败：'+e.message, 'err'); $('status').textContent = String(e && e.stack || e); }
+    try { show('读取中...', 'muted'); render(await requestJson('/api?action=admin-status&password='+encodeURIComponent(password()), { headers:{ 'Authorization':'Bearer '+password(), 'X-Admin-Password':password() } })); }
+    catch(e) { show(e.name === 'AbortError' ? '请求超时：/api 没响应，通常是部署没生效或函数报错。' : '请求失败：'+e.message, 'err'); $('status').textContent = String(e && e.stack || e); }
   }
   async function toggleAllowlist(disabled){
-    try { show(disabled ? '正在临时关闭白名单...' : '正在重新开启白名单...', 'muted'); render(await requestJson('/api?action=admin-toggle', { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+password(), 'X-Admin-Password':password() }, body: JSON.stringify({ disabled, password: password() }) })); }
+    try { show(disabled ? '正在临时关闭白名单...' : '正在重新开启白名单...', 'muted'); render(await requestJson('/api?action=admin-toggle&disabled='+(disabled?'true':'false')+'&password='+encodeURIComponent(password()), { method:'GET', headers:{ 'Authorization':'Bearer '+password(), 'X-Admin-Password':password() } })); }
     catch(e) { show(e.name === 'AbortError' ? '请求超时：/api 没响应。' : '请求失败：'+e.message, 'err'); $('status').textContent = String(e && e.stack || e); }
   }
   async function loadHealth(){

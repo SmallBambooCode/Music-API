@@ -6,7 +6,7 @@ const { setCors, sendJson, sendText, redirect, getQuery, sendMaybeJsonp, readJso
 const { checkAllowlist, getStoredAllowlist, isAdminAuthed, getClientIp, getRequestCandidates, getRuntimeAllowlistState, setRuntimeAllowlistDisabled } = require('../lib/allowlist');
 
 function statusPage() {
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Meting Enhanced Adapter v6</title><style>body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:920px;margin:48px auto;padding:0 20px;line-height:1.65;background:#fafafa;color:#18181b}.card{background:white;border:1px solid #e4e4e7;border-radius:16px;padding:20px;margin:16px 0}code{background:#f4f4f5;padding:2px 6px;border-radius:6px}pre{background:#18181b;color:white;padding:16px;border-radius:12px;overflow:auto}</style></head><body><h1>Meting Enhanced Adapter v6 正在运行</h1><div class="card"><p>v6 使用单一 <code>/api</code> 函数处理管理开关和 Meting 接口，避免 Vercel rewrite 导致管理员页面卡死，也保证临时关闭白名单能影响同一个函数实例内的播放接口。</p></div><pre>/api?action=health
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Meting Enhanced Adapter v7</title><style>body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:920px;margin:48px auto;padding:0 20px;line-height:1.65;background:#fafafa;color:#18181b}.card{background:white;border:1px solid #e4e4e7;border-radius:16px;padding:20px;margin:16px 0}code{background:#f4f4f5;padding:2px 6px;border-radius:6px}pre{background:#18181b;color:white;padding:16px;border-radius:12px;overflow:auto}</style></head><body><h1>Meting Enhanced Adapter v7 正在运行</h1><div class="card"><p>v7 使用单一 <code>/api</code> 函数处理管理开关和 Meting 接口，避免 Vercel rewrite 导致管理员页面卡死，也保证临时关闭白名单能影响同一个函数实例内的播放接口。</p></div><pre>/api?action=health
 /api?action=admin-status
 /api?server=netease&type=playlist&id=6907557348
 /api?server=netease&type=url&id=473403185&json=1</pre><p><a href="/admin/">打开管理员页面</a></p></body></html>`;
@@ -16,7 +16,7 @@ async function adminStatusPayload(req) {
   const info = await getStoredAllowlist();
   return {
     ok: true,
-    version: '0.6.0',
+    version: '0.7.0',
     rules: info.rules,
     source: info.source,
     writable: false,
@@ -28,8 +28,7 @@ async function adminStatusPayload(req) {
       ...envSummary(),
       hasAdminPassword: Boolean(process.env.ADMIN_PASSWORD),
       allowlistRawLength: String(process.env.ALLOWLIST || '').length,
-      fallbackApiConfigured: Boolean(process.env.METING_FALLBACK_API || process.env.LEGACY_METING_API),
-      urlProvider: String(process.env.URL_PROVIDER || 'enhanced-then-fallback'),
+      outerUrlFallback: true,
     },
     message: '白名单只从 Vercel 环境变量 ALLOWLIST 读取；本页面只允许用 ADMIN_PASSWORD 临时关闭/开启白名单。',
   };
@@ -40,15 +39,14 @@ async function healthPayload(req) {
   return {
     ok: true,
     service: 'meting-enhanced-vercel',
-    version: '0.6.0',
+    version: '0.7.0',
     env: {
       ...envSummary(),
       hasAdminPassword: Boolean(process.env.ADMIN_PASSWORD),
       allowlistCount: allowlist.rules.length,
       allowlistRawLength: String(process.env.ALLOWLIST || '').length,
       allowlistDisabledDefault: String(process.env.ALLOWLIST_DISABLED_DEFAULT || ''),
-      fallbackApiConfigured: Boolean(process.env.METING_FALLBACK_API || process.env.LEGACY_METING_API),
-      urlProvider: String(process.env.URL_PROVIDER || 'enhanced-then-fallback'),
+      outerUrlFallback: true,
     },
     runtimeSwitch: getRuntimeAllowlistState(),
     note: 'No secrets are returned here. If hasAdminPassword/hasNcmMusicU is false after setting Vercel env vars, redeploy the same environment you are visiting.',
@@ -63,7 +61,8 @@ async function handleAdmin(req, res, query) {
   }
   let body = {};
   if (req.method === 'POST') body = await readJson(req);
-  if (!isAdminAuthed(req, body)) {
+  const authPayload = { ...body, password: body.password || query.password || query.adminPassword || '' };
+  if (!isAdminAuthed(req, authPayload)) {
     return sendJson(req, res, 401, {
       ok: false,
       error: 'unauthorized',
@@ -71,8 +70,9 @@ async function handleAdmin(req, res, query) {
       env: { hasAdminPassword: Boolean(process.env.ADMIN_PASSWORD) },
     }, '*');
   }
-  if (req.method === 'POST') {
-    const disabled = body.disabled !== undefined ? Boolean(body.disabled) : query.disabled === '1' || query.disabled === 'true';
+  if (query.action === 'admin-toggle') {
+    const raw = body.disabled !== undefined ? body.disabled : query.disabled;
+    const disabled = ['1', 'true', 'yes', 'on'].includes(String(raw).toLowerCase());
     setRuntimeAllowlistDisabled(disabled);
   }
   return sendJson(req, res, 200, await adminStatusPayload(req), '*');
