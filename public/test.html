@@ -3,44 +3,95 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Meting Enhanced Adapter v12</title>
+<title>Meting Enhanced Adapter v13</title>
 <style>
-body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:980px;margin:40px auto;padding:0 18px;line-height:1.65;background:#fafafa;color:#18181b}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:1180px;margin:34px auto;padding:0 18px;line-height:1.65;background:#fafafa;color:#18181b}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px}
 .card{background:#fff;border:1px solid #e4e4e7;border-radius:16px;padding:18px;margin:16px 0}
-input{font:inherit;padding:8px 10px;border:1px solid #d4d4d8;border-radius:8px;width:260px}
-button{font:inherit;padding:8px 12px;border:1px solid #18181b;border-radius:8px;background:#18181b;color:#fff;cursor:pointer;margin-right:6px}
+input,select{font:inherit;padding:8px 10px;border:1px solid #d4d4d8;border-radius:8px;width:240px;max-width:100%;box-sizing:border-box}
+button{font:inherit;padding:8px 12px;border:1px solid #18181b;border-radius:8px;background:#18181b;color:#fff;cursor:pointer;margin:4px 6px 4px 0}
+button.secondary{background:#fff;color:#18181b}
 audio{width:100%;margin-top:12px}
-pre{background:#f4f4f5;padding:14px;border-radius:10px;overflow:auto;max-height:520px}
+pre{background:#f4f4f5;padding:14px;border-radius:10px;overflow:auto;max-height:520px;white-space:pre-wrap}
 code{background:#f4f4f5;padding:2px 6px;border-radius:6px}
+.small{font-size:.92em;color:#52525b}
 </style>
 </head>
 <body>
-<h1>Meting Enhanced Adapter v12</h1>
-<div class="card">
-  <p>核心链路：api-enhanced → MetingJS 格式。管理页：<a href="/admin">/admin</a></p>
-</div>
+<h1>Meting Enhanced Adapter v13</h1>
 
 <div class="card">
-  <h2>播放 URL 测试</h2>
-  <p>
-    歌曲 ID：
-    <input id="songId" value="174944">
-    <button onclick="testUrl()">测试播放</button>
-    <button onclick="openJson()">打开 JSON</button>
-    <button onclick="probe()">诊断接口</button>
-  </p>
-  <audio id="audio" controls preload="none"></audio>
-  <pre id="urlOut">等待测试...</pre>
+  <p>核心链路：<code>api-enhanced</code> → <code>MetingJS title/author/url/pic/lrc</code>。本地默认对接 <code>http://localhost:3000</code>；Vercel 默认走 module 模式。</p>
+  <p><a href="/admin">白名单管理页</a> · <a href="/api?action=health" target="_blank">健康检查 JSON</a></p>
 </div>
 
-<div class="card">
-  <h2>MetingJS 歌单格式测试</h2>
-  <p>
-    歌单 ID：
-    <input id="playlistId" value="60198">
-    <button onclick="testPlaylist()">测试歌单</button>
-  </p>
-  <pre id="playlistOut">等待测试...</pre>
+<div class="grid">
+  <div class="card">
+    <h2>播放 URL</h2>
+    <p>
+      歌曲 ID：
+      <input id="songId" value="174944">
+    </p>
+    <p>
+      <button onclick="testUrl()">测试播放</button>
+      <button class="secondary" onclick="openUrlJson()">打开 JSON</button>
+      <button class="secondary" onclick="probe()">诊断接口</button>
+    </p>
+    <audio id="audio" controls preload="none"></audio>
+    <pre id="urlOut">等待测试...</pre>
+  </div>
+
+  <div class="card">
+    <h2>MetingJS 歌单格式</h2>
+    <p>歌单 ID：<input id="playlistId" value="60198"></p>
+    <p>数量：<input id="playlistLimit" value="5"></p>
+    <button onclick="testPlaylist()">测试歌单转换</button>
+    <pre id="playlistOut">等待测试...</pre>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>搜索</h2>
+    <p>关键词：<input id="searchKeyword" value="周杰伦"></p>
+    <p>数量：<input id="searchLimit" value="5"></p>
+    <button onclick="testSearch()">MetingJS 搜索格式</button>
+    <button class="secondary" onclick="enhanced('/search', {keywords:val('searchKeyword'), limit:val('searchLimit'), type:'1'}, 'searchOut')">底层 /search</button>
+    <pre id="searchOut">等待测试...</pre>
+  </div>
+
+  <div class="card">
+    <h2>歌曲详情 / 歌词 / 可用性 / 评论</h2>
+    <p>歌曲 ID：<input id="detailSongId" value="174944"></p>
+    <button onclick="testSong()">MetingJS 单曲格式</button>
+    <button class="secondary" onclick="enhanced('/song/detail', {ids:val('detailSongId')}, 'songOut')">底层 /song/detail</button>
+    <button class="secondary" onclick="enhanced('/lyric', {id:val('detailSongId')}, 'songOut')">底层 /lyric</button>
+    <button class="secondary" onclick="enhanced('/check/music', {id:val('detailSongId')}, 'songOut')">底层 /check/music</button>
+    <button class="secondary" onclick="enhanced('/comment/music', {id:val('detailSongId'), limit:1}, 'songOut')">底层 /comment/music</button>
+    <pre id="songOut">等待测试...</pre>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>专辑 / 歌手</h2>
+    <p>专辑 ID：<input id="albumId" value="32311"></p>
+    <button onclick="testAlbum()">MetingJS 专辑格式</button>
+    <button class="secondary" onclick="enhanced('/album', {id:val('albumId')}, 'albumOut')">底层 /album</button>
+    <p>歌手 ID：<input id="artistId" value="6452"></p>
+    <button onclick="testArtist()">MetingJS 歌手歌曲格式</button>
+    <button class="secondary" onclick="enhanced('/artist/songs', {id:val('artistId'), limit:5, offset:0}, 'albumOut')">底层 /artist/songs</button>
+    <pre id="albumOut">等待测试...</pre>
+  </div>
+
+  <div class="card">
+    <h2>原始 enhanced 路由调试</h2>
+    <p class="small">只开放安全映射路由；不开放 match/unblock 类接口。</p>
+    <p>Path：<input id="rawPath" value="/playlist/track/all"></p>
+    <p>Query：<input id="rawQuery" value="id=60198&limit=3&offset=0" style="width:100%"></p>
+    <button onclick="testRaw()">请求底层路由</button>
+    <pre id="rawOut">等待测试...</pre>
+  </div>
 </div>
 
 <div class="card">
@@ -50,6 +101,7 @@ code{background:#f4f4f5;padding:2px 6px;border-radius:6px}
 </div>
 
 <script>
+function val(id){ return document.getElementById(id).value.trim(); }
 async function pretty(res) {
   try { return JSON.stringify(await res.json(), null, 2); }
   catch { return await res.text(); }
@@ -62,7 +114,7 @@ function apiUrl(id, extra='') {
   return '/api?server=netease&type=url&id=' + encodeURIComponent(id) + extra;
 }
 async function testUrl(){
-  const id = document.getElementById('songId').value.trim();
+  const id = val('songId');
   const jsonUrl = apiUrl(id, '&json=1&debug=1');
   const res = await fetch(jsonUrl);
   const text = await pretty(res);
@@ -77,19 +129,44 @@ async function testUrl(){
     }
   } catch {}
 }
-function openJson(){
-  const id = document.getElementById('songId').value.trim();
-  window.open(apiUrl(id, '&json=1&debug=1'), '_blank');
+function openUrlJson(){
+  window.open(apiUrl(val('songId'), '&json=1&debug=1'), '_blank');
 }
 async function probe(){
-  const id = document.getElementById('songId').value.trim();
-  const res = await fetch('/api?action=probe&id=' + encodeURIComponent(id));
+  const res = await fetch('/api?action=probe&id=' + encodeURIComponent(val('songId')));
   document.getElementById('urlOut').textContent = await pretty(res);
 }
 async function testPlaylist(){
-  const id = document.getElementById('playlistId').value.trim();
-  const res = await fetch('/api?server=netease&type=playlist&id=' + encodeURIComponent(id) + '&limit=5&debug=1');
+  const res = await fetch('/api?server=netease&type=playlist&id=' + encodeURIComponent(val('playlistId')) + '&limit=' + encodeURIComponent(val('playlistLimit')) + '&debug=1');
   document.getElementById('playlistOut').textContent = await pretty(res);
+}
+async function testSearch(){
+  const res = await fetch('/api?server=netease&type=search&id=' + encodeURIComponent(val('searchKeyword')) + '&limit=' + encodeURIComponent(val('searchLimit')) + '&debug=1');
+  document.getElementById('searchOut').textContent = await pretty(res);
+}
+async function testSong(){
+  const res = await fetch('/api?server=netease&type=song&id=' + encodeURIComponent(val('detailSongId')) + '&debug=1');
+  document.getElementById('songOut').textContent = await pretty(res);
+}
+async function testAlbum(){
+  const res = await fetch('/api?server=netease&type=album&id=' + encodeURIComponent(val('albumId')) + '&debug=1');
+  document.getElementById('albumOut').textContent = await pretty(res);
+}
+async function testArtist(){
+  const res = await fetch('/api?server=netease&type=artist&id=' + encodeURIComponent(val('artistId')) + '&limit=5&debug=1');
+  document.getElementById('albumOut').textContent = await pretty(res);
+}
+function query(params){
+  const s = new URLSearchParams(params);
+  return s.toString();
+}
+async function enhanced(path, params, outId){
+  const res = await fetch('/api?action=enhanced&path=' + encodeURIComponent(path) + '&' + query(params));
+  document.getElementById(outId).textContent = await pretty(res);
+}
+async function testRaw(){
+  const res = await fetch('/api?action=enhanced&path=' + encodeURIComponent(val('rawPath')) + '&' + val('rawQuery'));
+  document.getElementById('rawOut').textContent = await pretty(res);
 }
 loadHealth();
 </script>

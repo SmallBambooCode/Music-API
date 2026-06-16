@@ -1,8 +1,8 @@
 {
-  "name": "meting-enhanced-adapter-v12",
-  "version": "0.12.0",
+  "name": "meting-enhanced-adapter-v13",
+  "version": "0.13.0",
   "private": true,
-  "description": "MetingJS-compatible adapter for api-enhanced with whitelist admin controls",
+  "description": "MetingJS-compatible adapter for NeteaseCloudMusicApiEnhanced with local/Vercel modes and whitelist admin",
   "type": "commonjs",
   "main": "server.js",
   "scripts": {
@@ -11,7 +11,7 @@
     "enhanced": "node scripts/start-enhanced.js",
     "both": "node scripts/start-both.js",
     "doctor": "node scripts/doctor.js",
-    "check": "node --check server.js && node --check api/index.js && node --check lib/provider.js && node --check lib/enhanced-http-client.js && node --check lib/enhanced-module-client.js && node --check lib/meting.js && node --check lib/allowlist.js && node --check scripts/start-enhanced.js && node --check scripts/start-both.js && node --check scripts/doctor.js"
+    "check": "node --check server.js && node --check api/index.js && node --check lib/provider.js && node --check lib/enhanced-http-client.js && node --check lib/enhanced-module-client.js && node --check lib/meting.js && node --check lib/allowlist.js && node --check lib/app.js && node --check scripts/start-enhanced.js && node --check scripts/start-both.js && node --check scripts/doctor.js"
   },
   "engines": {
     "node": ">=18"

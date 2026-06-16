@@ -34,7 +34,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Meting Enhanced Adapter v12: http://127.0.0.1:${PORT}/test`);
+  console.log(`Meting Enhanced Adapter v13: http://127.0.0.1:${PORT}/test`);
   console.log(`Admin: http://127.0.0.1:${PORT}/admin`);
   console.log(`Health: http://127.0.0.1:${PORT}/api?action=health`);
   console.log(`Expect api-enhanced at: ${httpClient.getBase()}`);
