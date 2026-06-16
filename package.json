@@ -1,20 +1,22 @@
 {
-  "name": "meting-enhanced-vercel",
-  "version": "0.7.0",
+  "name": "meting-enhanced-adapter-v12",
+  "version": "0.12.0",
   "private": true,
-  "description": "Meting-API compatible Vercel adapter with api-enhanced, env-only allowlist, admin form feedback, and Meting-compatible outer-url playback fallback.",
-  "main": "api/index.js",
+  "description": "MetingJS-compatible adapter for api-enhanced with whitelist admin controls",
+  "type": "commonjs",
+  "main": "server.js",
   "scripts": {
-    "dev": "vercel dev",
-    "lint:syntax": "node -c api/index.js && node -c lib/meting.js && node -c lib/ncm.js && node -c lib/http.js && node -c lib/allowlist.js && node -c lib/cache.js"
+    "adapter": "node server.js",
+    "start": "node server.js",
+    "enhanced": "node scripts/start-enhanced.js",
+    "both": "node scripts/start-both.js",
+    "doctor": "node scripts/doctor.js",
+    "check": "node --check server.js && node --check api/index.js && node --check lib/provider.js && node --check lib/enhanced-http-client.js && node --check lib/enhanced-module-client.js && node --check lib/meting.js && node --check lib/allowlist.js && node --check scripts/start-enhanced.js && node --check scripts/start-both.js && node --check scripts/doctor.js"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
     "@neteasecloudmusicapienhanced/api": "^4.35.1"
-  },
-  "devDependencies": {
-    "vercel": "^34.3.0"
   }
 }

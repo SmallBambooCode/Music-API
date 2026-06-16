@@ -1,8 +1,34 @@
 {
   "version": 2,
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/test",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/admin",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/admin/",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/health",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/api",
+      "destination": "/api/index.js"
+    }
+  ],
   "functions": {
     "api/index.js": {
-      "maxDuration": 20
+      "maxDuration": 30
     }
   }
 }

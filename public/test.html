@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meting Enhanced Adapter v12</title>
+<style>
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:980px;margin:40px auto;padding:0 18px;line-height:1.65;background:#fafafa;color:#18181b}
+.card{background:#fff;border:1px solid #e4e4e7;border-radius:16px;padding:18px;margin:16px 0}
+input{font:inherit;padding:8px 10px;border:1px solid #d4d4d8;border-radius:8px;width:260px}
+button{font:inherit;padding:8px 12px;border:1px solid #18181b;border-radius:8px;background:#18181b;color:#fff;cursor:pointer;margin-right:6px}
+audio{width:100%;margin-top:12px}
+pre{background:#f4f4f5;padding:14px;border-radius:10px;overflow:auto;max-height:520px}
+code{background:#f4f4f5;padding:2px 6px;border-radius:6px}
+</style>
+</head>
+<body>
+<h1>Meting Enhanced Adapter v12</h1>
+<div class="card">
+  <p>核心链路：api-enhanced → MetingJS 格式。管理页：<a href="/admin">/admin</a></p>
+</div>
+
+<div class="card">
+  <h2>播放 URL 测试</h2>
+  <p>
+    歌曲 ID：
+    <input id="songId" value="174944">
+    <button onclick="testUrl()">测试播放</button>
+    <button onclick="openJson()">打开 JSON</button>
+    <button onclick="probe()">诊断接口</button>
+  </p>
+  <audio id="audio" controls preload="none"></audio>
+  <pre id="urlOut">等待测试...</pre>
+</div>
+
+<div class="card">
+  <h2>MetingJS 歌单格式测试</h2>
+  <p>
+    歌单 ID：
+    <input id="playlistId" value="60198">
+    <button onclick="testPlaylist()">测试歌单</button>
+  </p>
+  <pre id="playlistOut">等待测试...</pre>
+</div>
+
+<div class="card">
+  <h2>健康检查</h2>
+  <button onclick="loadHealth()">刷新健康检查</button>
+  <pre id="health">Loading...</pre>
+</div>
+
+<script>
+async function pretty(res) {
+  try { return JSON.stringify(await res.json(), null, 2); }
+  catch { return await res.text(); }
+}
+async function loadHealth(){
+  const res = await fetch('/api?action=health');
+  document.getElementById('health').textContent = await pretty(res);
+}
+function apiUrl(id, extra='') {
+  return '/api?server=netease&type=url&id=' + encodeURIComponent(id) + extra;
+}
+async function testUrl(){
+  const id = document.getElementById('songId').value.trim();
+  const jsonUrl = apiUrl(id, '&json=1&debug=1');
+  const res = await fetch(jsonUrl);
+  const text = await pretty(res);
+  document.getElementById('urlOut').textContent = text;
+  try {
+    const data = JSON.parse(text);
+    if (data.ok && data.url) {
+      const audio = document.getElementById('audio');
+      audio.src = apiUrl(id);
+      audio.load();
+      try { await audio.play(); } catch(e) {}
+    }
+  } catch {}
+}
+function openJson(){
+  const id = document.getElementById('songId').value.trim();
+  window.open(apiUrl(id, '&json=1&debug=1'), '_blank');
+}
+async function probe(){
+  const id = document.getElementById('songId').value.trim();
+  const res = await fetch('/api?action=probe&id=' + encodeURIComponent(id));
+  document.getElementById('urlOut').textContent = await pretty(res);
+}
+async function testPlaylist(){
+  const id = document.getElementById('playlistId').value.trim();
+  const res = await fetch('/api?server=netease&type=playlist&id=' + encodeURIComponent(id) + '&limit=5&debug=1');
+  document.getElementById('playlistOut').textContent = await pretty(res);
+}
+loadHealth();
+</script>
+</body>
+</html>
