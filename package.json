@@ -1,22 +1,19 @@
 {
   "name": "ourcraft-music-api",
-  "version": "0.14.0",
+  "version": "0.16.0",
   "private": true,
-  "description": "Ourcraft Music API — multi-platform (netease/kugou/kuwo) MetingJS-compatible adapter",
+  "description": "Ourcraft Music API — multi-platform (netease/kugou/kuwo/qq) MetingJS-compatible adapter with embedded api-enhanced + unblock",
   "type": "commonjs",
   "main": "server.js",
   "scripts": {
-    "adapter": "node server.js",
     "start": "node server.js",
-    "enhanced": "node scripts/start-enhanced.js",
-    "both": "node scripts/start-both.js",
-    "doctor": "node scripts/doctor.js",
-    "check": "node --check server.js && node --check api/index.js && node --check lib/provider.js && node --check lib/enhanced-http-client.js && node --check lib/enhanced-module-client.js && node --check lib/meting.js && node --check lib/allowlist.js && node --check lib/app.js && node --check scripts/start-enhanced.js && node --check scripts/start-both.js && node --check scripts/doctor.js"
+    "check": "node --check server.js && node --check api/index.js && node --check lib/provider.js && node --check lib/netease-client.js && node --check lib/meting.js && node --check lib/allowlist.js && node --check lib/app.js && node --check lib/providers/index.js && node --check lib/providers/netease.js && node --check lib/providers/kugou.js && node --check lib/providers/kuwo.js && node --check lib/providers/qq.js"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
-    "@neteasecloudmusicapienhanced/api": "^4.35.1"
+    "@neteasecloudmusicapienhanced/api": "^4.35.1",
+    "@unblockneteasemusic/server": "^0.28.0"
   }
 }

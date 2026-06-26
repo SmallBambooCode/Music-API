@@ -8,9 +8,9 @@ loadDotEnv(path.join(process.cwd(), '.env.local'));
 loadDotEnv(path.join(process.cwd(), '.env'));
 
 const { handle } = require('./lib/app');
-const httpClient = require('./lib/enhanced-http-client');
+const nc = require('./lib/netease-client');
 
-const PORT = httpClient.getAdapterPort();
+const PORT = nc.getAdapterPort();
 
 function loadDotEnv(file) {
   if (!fs.existsSync(file)) return;
@@ -34,8 +34,9 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Meting Enhanced Adapter v13: http://127.0.0.1:${PORT}/test`);
-  console.log(`Admin: http://127.0.0.1:${PORT}/admin`);
+  console.log(`Ourcraft Music API v0.16.0: http://127.0.0.1:${PORT}/test`);
+  console.log(`Admin:  http://127.0.0.1:${PORT}/admin`);
   console.log(`Health: http://127.0.0.1:${PORT}/api?action=health`);
-  console.log(`Expect api-enhanced at: ${httpClient.getBase()}`);
+  console.log(`Mode:   api-enhanced 已融合 (无需启动外部服务)`);
+  console.log(`Unblock: ${nc.unblockEnabled() ? 'enabled' : 'disabled'} | Cookie: ${nc.buildCookie() ? 'configured' : 'anonymous'}`);
 });

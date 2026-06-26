@@ -1,177 +1,143 @@
-# Meting Enhanced Adapter v13
+# Ourcraft Music API v0.16.0
 
-一个面向 MetingJS/APlayer 的网易云音乐适配器。项目核心目标是：
+多平台音乐 API 服务端 (网易云 / 酷狗 / 酷我 / QQ音乐), 兼容 MetingJS 格式。
 
-- 继续保留 MetingJS 习惯的 `server/type/id/api` 调用格式；
-- 底层数据源接入 `NeteaseCloudMusicApiEnhanced/api-enhanced`；
-- 输出统一转换为 MetingJS 需要的 `title / author / url / pic / lrc`；
-- 本地可通过传统双服务方式调试，Vercel 可通过 module 模式部署；
-- 提供只读环境变量白名单，以及管理员临时开关白名单的测试入口。
+**v0.16.0 起 api-enhanced 已融合进本项目**, 不再需要启动外部 api-enhanced 服务, 一个进程即可同时拥有网易云 API + 自动解灰 (从其他音源匹配 VIP 歌曲)。
 
-> 本项目不是解灰工具，不开放 `/song/url/match`，也不会向底层传递 `unblock` 参数。播放 URL 仅使用 api-enhanced 的正常 `/song/url/v1`、`/song/url` 能力，或者在你显式设置 `URL_STRATEGY=enhanced-then-outer` 时使用网易云 outer URL 兜底。
+## 功能
 
----
+- **四大平台**: netease / kugou / kuwo / qq
+- **融合 api-enhanced**: 直接 require `@neteasecloudmusicapienhanced/api` 模块函数, 无需 HTTP 转发
+- **两层解灰**:
+  - 第一层 api-enhanced 内置 (`unblockmusic-utils` 6 模块: baka/bikonoo/byfuns/msls/qijieya/unm)
+  - 第二层直接调用 `@unblockneteasemusic/server` (`match()` 含 **bilibili/bilivideo** B 站音源 + pyncmd/bodian/qq/kugou/kuwo/migu)
+  - 第一层未命中时启用第二层, 大幅提升 VIP 歌曲命中率
+- **song_full 端点**: 一次请求并发返回 name+url+lyric+time, 加速插件调用
+- **MetingJS 兼容**: 输出 `title / author / url / pic / lrc` 标准格式
+- **透传 api-enhanced**: `/api?action=enhanced&path=/xxx` 可调用 api-enhanced 任意模块 (含 login/cloudsearch/playlist_detail 等)
+- **白名单**: 环境变量配置, 管理员临时开关
 
-## 项目来源与关系
+## 接口
 
-本项目是一个适配层，开发思路来自两个开源项目：
-
-1. `xizeyoupan/Meting-API`  
-   这个项目提供了 MetingJS 常用的 API 输出结构，前端播放器通过 `server/type/id` 请求，最终得到 `title / author / url / pic / lrc` 这类字段。
-
-2. `NeteaseCloudMusicApiEnhanced/api-enhanced`  
-   这个项目是网易云音乐第三方 Node.js API，提供搜索、歌单、歌词、评论、歌曲 URL 等更完整的底层接口。其 README 说明默认服务端口是 3000，指定端口需要设置 `PORT`；敏感信息如 cookie 推荐放在部署平台环境变量中。
-
-v13 做的是：**把 api-enhanced 的底层接口结果转换成 MetingJS 可直接消费的格式**。
-
----
-
-## 目录结构
-
-```text
-.
-├── api/index.js                  # Vercel Serverless 入口
-├── lib/
-│   ├── app.js                    # HTTP 路由与业务入口
-│   ├── allowlist.js              # 白名单与管理员密码逻辑
-│   ├── enhanced-http-client.js   # 本地/远程 api-enhanced HTTP 客户端
-│   ├── enhanced-module-client.js # Vercel module 模式客户端
-│   ├── meting.js                 # api-enhanced → MetingJS 格式转换
-│   └── provider.js               # http/module provider 自动选择
-├── public/
-│   ├── test.html                 # 调试台
-│   └── admin.html                # 白名单管理页
-├── scripts/
-│   ├── start-enhanced.js         # 启动 api-enhanced
-│   ├── start-both.js             # 同时启动 api-enhanced 与适配器
-│   └── doctor.js                 # 命令行诊断
-├── server.js                     # 本地 Node 服务入口
-├── vercel.json
-└── package.json
+```
+{api}/api?server={platform}&type={type}&id={id|keyword}&userid=xxx&token=xxx
 ```
 
----
+| type | 用途 | 返回 |
+|---|---|---|
+| `search` | 搜索歌曲 | `[{id, name, singer, time}]` |
+| `song_full` | 完整单曲 (推荐插件使用) | `{id, name, singer, url, lyric, time, ok, source}` |
+| `url` | 播放地址 | 302 重定向 |
+| `lrc` | 歌词文本 | LRC 格式 |
+| `playlist` | 网易云歌单 | MetingJS 格式 |
+| `song` | MetingJS 兼容 | 同 playlist |
+| `pic` | 封面图 (仅 netease) | 302 重定向 |
 
-## 本地运行：推荐传统双窗口
+特殊端点:
+```
+/api?action=enhanced&path=/cloudsearch&keywords=xxx   # 透传 api-enhanced 任意模块
+/api?action=health                                      # 健康检查
+```
 
-### 1. 启动 api-enhanced
+## 平台支持
+
+| 平台 | 登录需求 | VIP 歌曲支持 | 备注 |
+|---|---|---|---|
+| `netease` | NCM_MUSIC_U (可选) | **支持 (自动解灰)** | 融合 api-enhanced, unblockmusic-utils |
+| `kugou` | userid + token | 支持 (需登录) | trackercdn 接口 |
+| `kuwo` | kw_token + kw_user_id | 支持 (需登录) | antiserver 接口 |
+| `qq` | **无需登录** | 不支持 VIP | 公开 vkey 接口, 自带重试 |
+
+### 解灰工作原理 (两层策略)
+
+**第一层** (api-enhanced 内置, `unblockmusic-utils` 6 模块):
+
+`matchID(id, source)` 不指定 source 时按 `fs.readdirSync(modulesDir)` 顺序遍历所有模块, 每个模块单独尝试, 返回第一个成功的 URL。模块列表 (来自 `unblockmusic-utils/modules/`):
+
+| 模块 | 音源 |
+|---|---|
+| `baka` | api.baka.plus (第三方聚合) |
+| `bikonoo` | ncm.bikonoo.com (第三方) |
+| `byfuns` | api.byfuns.top (第三方) |
+| `msls` | api.msls1441.com (第三方) |
+| `qijieya` | api.qijieya.cn (第三方) |
+| `unm` | `@unblockneteasemusic/server`, 内部按 `['pyncmd','bodian','qq']` 顺序匹配 |
+
+实际命中哪个音源由各模块当前可用性决定, **不保证固定顺序**。
+
+**第二层** (补充, 直接调用 `@unblockneteasemusic/server`):
+
+第一层未命中时启用, 绕过 `unblockmusic-utils` 包装层, 直接调用 `@unblockneteasemusic/server` 的 `match(id, sources)` 函数。源列表由 `EXTRA_UNBLOCK_SOURCES` 环境变量配置, **默认包含 B 站两个音源**:
+
+| 源 | 音源 |
+|---|---|
+| `bilibili` | B 站音乐 (`api.bilibili.com/audio/music-service-c/s`) |
+| `bilivideo` | B 站视频音频流 (`api.bilibili.com/x/web-interface/wbi/search/type`) |
+| `pyncmd` | 网易云公网音源 |
+| `bodian` | 酷我 (bd-er.kuwo.cn) |
+| `qq` | QQ 音乐 |
+| `kugou` | 酷狗 |
+| `kuwo` | 酷我 |
+| `migu` | 咪咕 |
+
+第二层使用 `Promise.any` 并发尝试所有源, 返回第一个成功的 URL。`@unblockneteasemusic/server` 的 13 个内置源见 [consts.js](https://github.com/unblockneteasemusic/server/blob/master/src/consts.js)。
+
+日志会打印 `INFO: (provider/match) Replaced: [songId] songName` 提示替换成功, source 字段显示实际命中音源 (如 `extra:bilibili` / `extra:bilivideo` / `unblock` 等)。
+
+## 本地运行
+
+### 一键启动 (无需外部服务)
 
 ```powershell
-npx @neteasecloudmusicapienhanced/api@latest
-```
-
-正常应看到：
-
-```text
-Server started successfully @ http://localhost:3000
-```
-
-### 2. 启动适配器
-
-```powershell
+npm install
 node server.js
 ```
 
-默认地址：
+默认地址: `http://127.0.0.1:3017`
 
-```text
-http://127.0.0.1:3017/test
-http://127.0.0.1:3017/admin
-```
-
-### 3. 本地 `.env.local`
-
-复制：
-
-```powershell
-copy .env.example .env.local
-```
-
-本地建议：
+### .env 配置示例
 
 ```env
 ADAPTER_PORT=3017
-API_ENHANCED_PORT=3000
-NCM_API_BASE=http://localhost:3000
-PROVIDER_MODE=auto
+
+# 音质
+NCM_LEVEL=standard
+NCM_LEVELS=standard,exhigh,lossless,hires
+
+# 解灰 (默认开启)
+ENABLE_GENERAL_UNBLOCK=true
+
+# 兜底策略
+URL_STRATEGY=enhanced-only
+
+# 登录态 (留空则用游客模式, VIP 歌曲靠解灰)
+NCM_MUSIC_U=
+NCM_CSRF=
+# 或 NCM_COOKIE=MUSIC_U=xxx; __csrf=yyy; os=pc
+
+# 白名单 (空表示不限制)
 ALLOWLIST=
 ALLOW_LOCAL=true
+
+# 管理密码 (管理员接口不受白名单拦截)
 ADMIN_PASSWORD=
 ```
 
-注意：不要再写共用的 `PORT=3007`。api-enhanced 本体只认识 `PORT`，适配器不应该和它共用同一个端口变量。
-
----
-
-## 一键运行
-
-```powershell
-npm run both
-```
-
-v13 的 `npm run both` 使用 Windows 兼容的 `shell: true`，比 v11 的 `spawn` 方式更稳。它会把：
-
-```text
-API_ENHANCED_PORT=3000
-```
-
-转换成 api-enhanced 需要的：
-
-```text
-PORT=3000
-```
-
-然后再启动适配器。
-
----
-
 ## Vercel 部署
 
-Vercel 不能访问你电脑上的：
-
-```text
-http://localhost:3000
-```
-
-在 Vercel 里，`localhost` 只代表 Vercel 当前 Serverless 容器自己，不是你的电脑，也不是另一个常驻服务。因此 Vercel 上不要设置：
+v0.16.0 融合 api-enhanced 后, Vercel 直接 `node server.js` 即可, 无需外部 NCM_API_BASE。
 
 ```env
-NCM_API_BASE=http://localhost:3000
-NCM_API_BASE=http://127.0.0.1:3000
-```
-
-v13 的 provider 规则：
-
-```text
-本地 auto + NCM_API_BASE=http://localhost:3000  => http 模式
-Vercel auto + 无远程 NCM_API_BASE              => module 模式
-Vercel auto + NCM_API_BASE 是 localhost/127     => 自动忽略并切 module
-Vercel auto + NCM_API_BASE 是远程 https 地址    => http 模式
-PROVIDER_MODE=module                           => 强制 module
-PROVIDER_MODE=http                             => 强制 http
-```
-
-Vercel 推荐环境变量：
-
-```env
-PROVIDER_MODE=module
+ADAPTER_PORT=3017
+ENABLE_GENERAL_UNBLOCK=true
+URL_STRATEGY=enhanced-only
 NCM_MUSIC_U=你的 MUSIC_U
 NCM_CSRF=你的 __csrf
 NCM_LEVEL=standard
-NCM_LEVELS=standard,higher,exhigh,lossless,hires
-URL_STRATEGY=enhanced-only
-PLAYLIST_LIMIT=100
-REQUEST_TIMEOUT=15000
-DEBUG_RESPONSE=0
 ALLOWLIST=
 ALLOW_LOCAL=false
-ALLOWLIST_DISABLED_DEFAULT=false
 ADMIN_PASSWORD=你的管理员密码
 ```
-
-修改 Vercel 环境变量后，必须 Redeploy。
-
----
 
 ## MetingJS 接入
 
@@ -184,185 +150,95 @@ ADMIN_PASSWORD=你的管理员密码
 </meting-js>
 ```
 
-输出格式示例：
+## Provider 架构
 
-```json
-[
-  {
-    "title": "歌曲名",
-    "author": "歌手",
-    "url": "https://你的域名/api?server=netease&type=url&id=174944",
-    "pic": "https://p*.music.126.net/xxx.jpg",
-    "lrc": "https://你的域名/api?server=netease&type=lrc&id=174944"
-  }
-]
+```
+ourcraft-music-api/lib/
+├── providers/
+│   ├── index.js          # Provider 注册中心
+│   ├── netease.js        # 网易云 (调用 netease-client)
+│   ├── kugou.js          # 酷狗
+│   ├── kuwo.js           # 酷我
+│   └── qq.js             # QQ音乐 (公开 vkey)
+├── netease-client.js     # 直接 require api-enhanced 模块 + 解灰
+├── provider.js           # 网易云转发层 (聚合 netease-client 接口)
+├── meting.js             # MetingJS 格式转换
+└── app.js                # HTTP 路由层
 ```
 
----
-
-## 主要 API
-
-### 健康检查
-
-```text
-/api?action=health
-```
-
-### 诊断底层接口
-
-```text
-/api?action=probe&id=174944
-```
-
-### 歌曲播放 URL
-
-```text
-/api?server=netease&type=url&id=174944&json=1&debug=1
-```
-
-### 歌单转 MetingJS 格式
-
-```text
-/api?server=netease&type=playlist&id=60198&limit=5
-```
-
-### 搜索转 MetingJS 格式
-
-```text
-/api?server=netease&type=search&id=周杰伦&limit=5
-```
-
-### 歌曲详情转 MetingJS 格式
-
-```text
-/api?server=netease&type=song&id=174944
-```
-
-### 歌词
-
-```text
-/api?server=netease&type=lrc&id=174944
-```
-
-### 封面图跳转
-
-```text
-/api?server=netease&type=pic&id=174944
-```
-
----
-
-## 底层 enhanced 调试接口
-
-调试台 `/test` 增加了底层接口测试：
-
-```text
-/api?action=enhanced&path=/search&keywords=周杰伦&limit=5&type=1
-/api?action=enhanced&path=/song/detail&ids=174944
-/api?action=enhanced&path=/lyric&id=174944
-/api?action=enhanced&path=/check/music&id=174944
-/api?action=enhanced&path=/comment/music&id=174944&limit=1
-/api?action=enhanced&path=/playlist/track/all&id=60198&limit=5
-/api?action=enhanced&path=/album&id=32311
-/api?action=enhanced&path=/artist/songs&id=6452&limit=5
-```
-
-为了避免误用，`action=enhanced` 不开放包含 `match` 或 `unblock` 的路由。
-
----
-
-## 白名单与管理员页
-
-管理页：
-
-```text
-/admin
-```
-
-白名单只从环境变量读取：
-
-```env
-ALLOWLIST=localhost,127.0.0.1,yuncan.xyz,*.yuncan.xyz
-```
-
-支持格式：
-
-```text
-localhost
-127.0.0.1
-yuncan.xyz
-*.yuncan.xyz
-120.85.43.0/24
-```
-
-管理员接口永远不受白名单拦截，但必须校验 `ADMIN_PASSWORD`：
-
-```text
-/api?action=admin-status&password=你的密码
-/api?action=admin-toggle&disabled=true&password=你的密码
-/api?action=admin-toggle&disabled=false&password=你的密码
-```
-
-密码错误会明确返回：
-
-```json
+每个 provider 必须实现:
+```javascript
 {
-  "ok": false,
-  "auth": false,
-  "reason": "BAD_PASSWORD",
-  "message": "管理员密码不正确。"
+  platform,                              // 平台标识
+  search(keyword, limit),                // 搜索歌曲
+  songUrl(id, userId, token),            // 播放 URL
+  lyric(id),                             // 歌词
+  songFull(id, userId, token)            // 完整单曲 (Promise.all 并发)
 }
 ```
 
-未配置管理员密码会明确返回：
+## 主要 API 示例
 
-```json
-{
-  "ok": false,
-  "auth": false,
-  "reason": "ADMIN_PASSWORD_NOT_CONFIGURED",
-  "message": "服务端没有配置 ADMIN_PASSWORD。"
-}
+```text
+# 搜索
+/api?server=netease&type=search&id=周杰伦&limit=10
+/api?server=kugou&type=search&id=晴天&limit=10
+/api?server=qq&type=search&id=晴天&limit=10
+
+# 完整单曲 (推荐插件使用)
+/api?server=netease&type=song_full&id=186016          # 周杰伦"晴天", 自动解灰
+/api?server=kugou&type=song_full&id=xxx&userid=xxx&token=xxx
+/api?server=qq&type=song_full&id=0039MnYb0qxYhV
+
+# 网易云歌单
+/api?server=netease&type=playlist&id=60198
+
+# 透传 api-enhanced 任意模块
+/api?action=enhanced&path=/cloudsearch&keywords=周杰伦&limit=10
+/api?action=enhanced&path=/playlist_detail&id=60198
+/api?action=enhanced&path=/login_qr_key
 ```
-
----
 
 ## 常见问题
 
-### 1. 为什么本地 `127.0.0.1:3000` 不行，但 `localhost:3000` 可以？
+### 网易云歌曲播放 URL 不是 music.163.com?
 
-这通常是 Windows/Node/fetch 对 IPv4、IPv6、本机解析的差异导致的。v13 本地默认使用：
+是的, 这是解灰功能在工作。VIP 歌曲无法从网易云直接获取, 系统通过两层策略从其他音源匹配:
+- 第一层: `unblockmusic-utils` 的 baka/bikonoo/byfuns/msls/qijieya/unm 模块
+- 第二层: `@unblockneteasemusic/server` 直接调用, 含 **B 站 bilibili/bilivideo 音源**
 
-```env
-NCM_API_BASE=http://localhost:3000
+URL 域名可能是 `bd-er.kuwo.cn` (bodian)、`mcdn.bilivideo.cn` (B 站视频音频流)、`api.baka.plus` 重定向等。`source` 字段会显示命中音源 (如 `unblock` / `extra:bilivideo` / `extra:bodian`)。
+
+### 如何关闭解灰?
+
+- 关闭第一层: 设置 `ENABLE_GENERAL_UNBLOCK=false`
+- 关闭第二层: 设置 `ENABLE_EXTRA_UNBLOCK=false`
+- 全部关闭: 两个变量都设为 `false`, 将只走多音质请求 + outer URL 兜底
+
+### 如何只使用 B 站音源?
+
+设置 `EXTRA_UNBLOCK_SOURCES=bilibili,bilivideo` 并关闭第一层 (`ENABLE_GENERAL_UNBLOCK=false`), 这样解灰只走 B 站两个音源。
+
+### 酷狗/酷我 VIP 歌曲无法播放?
+
+需要登录获取 Token, 通过 `userid` 和 `token` 参数传入:
+```
+/api?server=kugou&type=song_full&id=xxx&userid=你的ID&token=你的Token
 ```
 
-### 2. 为什么 Vercel 上 `localhost:3000` 不行？
+### QQ 音乐部分歌曲无法播放?
 
-Vercel 的函数环境里没有你本机那个 api-enhanced 服务。`localhost` 只代表当前 Serverless 容器。v13 在 Vercel 上会自动切 module 模式，除非你提供一个真正公网可访问的远程 `NCM_API_BASE`。
+QQ 音乐 VIP 歌曲返回空 URL, 属正常行为。建议插件端提示用户切换其他源或登录其他平台账号。
 
-### 3. 为什么歌单能出、播放 URL 不出？
+## 版本历史
 
-先打开：
-
-```text
-/api?action=health
-/api?action=probe&id=174944
-```
-
-重点看：
-
-```text
-provider.selectedProvider
-provider.ok
-attempts[].status
-attempts[].hasUrl
-```
-
-如果 `hasUrl=false`，说明底层 api-enhanced 没有给该歌曲返回播放 URL。默认 `URL_STRATEGY=enhanced-only` 会明确失败，不假装成功。
-
----
+| 版本 | 主要变更 |
+|---|---|
+| 0.16.0 | **融合 api-enhanced** (直接 require 模块), 两层解灰 (unblockmusic-utils + @unblockneteasemusic/server 含 B 站 bilibili/bilivideo 音源), 删除 enhanced-http-client.js |
+| 0.15.0 | 新增 QQ音乐 provider, 清理屎山代码 (删 enhanced-module-client.js / doctor / scripts) |
+| 0.14.0 | 多平台架构 (netease/kugou/kuwo), song_full 并发端点, Provider 注册中心 |
+| 0.13.0 | 初始 Meting Enhanced Adapter |
 
 ## 许可与声明
 
-本项目是适配层示例工程。底层接口能力来自 `NeteaseCloudMusicApiEnhanced/api-enhanced`，MetingJS 输出约定参考 `xizeyoupan/Meting-API` 风格。请遵守相关平台服务条款与版权规则，不要把 Cookie、管理员密码等敏感信息提交到 GitHub。
+本项目是适配层工程。底层网易云 API 来自 `@neteasecloudmusicapienhanced/api` (MIT), 解灰能力来自 `@neteasecloudmusicapienhanced/unblockmusic-utils` (MIT) 和 `@unblockneteasemusic/server` (LGPL-3.0)。请遵守相关平台服务条款与版权规则, 不要把 Cookie、管理员密码等敏感信息提交到 GitHub。
