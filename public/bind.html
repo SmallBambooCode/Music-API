@@ -76,6 +76,21 @@ h1{text-align:center;font-size:22px;margin:16px 0 8px}
   <p class="hint" id="qr-hint">用 <b>QQ APP</b> (不是QQ音乐APP) 扫码登录</p>
 </div>
 
+<!-- ========== 酷我账号密码登录 (酷我无扫码) ========== -->
+<div class="card" id="kw-login-card" style="display:none">
+  <p class="hint" style="margin-bottom:12px;color:#b91c1c">酷我网页版暂不支持扫码登录, 请用账号密码登录:</p>
+  <div class="field">
+    <label>酷我账号 / 手机号 <span style="color:#b91c1c">*</span></label>
+    <input type="text" id="kw-username" placeholder="请输入酷我账号或手机号" autocomplete="off">
+  </div>
+  <div class="field">
+    <label>密码 <span style="color:#b91c1c">*</span></label>
+    <input type="password" id="kw-password" placeholder="请输入密码" autocomplete="off">
+  </div>
+  <button class="btn btn-primary" style="margin-top:12px" onclick="submitKwLogin()">登录酷我</button>
+  <div id="kw-result"></div>
+</div>
+
 <!-- ========== 手动输入 (备用方式) ========== -->
 <details class="card faq" id="manual-card">
   <summary>手动输入 Cookie (备用方式) — 扫码不成功时用这个</summary>
@@ -131,7 +146,19 @@ document.querySelectorAll('.tab').forEach(tab => {
     stopPoll();
     resetUI();
     updateManualFields();
-    document.getElementById('qr-hint').innerHTML = '用 <b>' + PLATFORMS[currentPlatform].app + '</b> 扫码登录';
+    // 酷我无扫码, 显示账号密码登录表单; 其他平台显示扫码
+    if (currentPlatform === 'kuwo') {
+      document.getElementById('qr-area').style.display = 'none';
+      document.getElementById('startBtn').style.display = 'none';
+      document.getElementById('qr-hint').style.display = 'none';
+      document.getElementById('kw-login-card').style.display = 'block';
+    } else {
+      document.getElementById('qr-area').style.display = 'block';
+      document.getElementById('startBtn').style.display = 'block';
+      document.getElementById('qr-hint').style.display = 'block';
+      document.getElementById('kw-login-card').style.display = 'none';
+      document.getElementById('qr-hint').innerHTML = '用 <b>' + PLATFORMS[currentPlatform].app + '</b> 扫码登录';
+    }
   });
 });
 
@@ -142,6 +169,7 @@ function resetUI() {
   document.getElementById('bind-code-area').style.display = 'none';
   document.getElementById('startBtn').textContent = '生成二维码';
   document.getElementById('startBtn').disabled = false;
+  document.getElementById('kw-result').innerHTML = '';
   pollCount = 0;
 }
 
@@ -208,6 +236,33 @@ async function submitManual() {
     }
   } catch (err) {
     document.getElementById('manual-result').innerHTML = '<p style="color:#b91c1c;margin-top:8px">网络错误: ' + err.message + '</p>';
+  }
+}
+
+// 酷我账号密码登录
+async function submitKwLogin() {
+  const username = document.getElementById('kw-username').value.trim();
+  const password = document.getElementById('kw-password').value.trim();
+  const result = document.getElementById('kw-result');
+  if (!username || !password) {
+    result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">请输入账号和密码</p>';
+    return;
+  }
+  result.innerHTML = '<p style="color:#71717a;margin-top:8px">正在登录...</p>';
+  try {
+    const data = await safeFetch(`${API_BASE}/api?action=kw_login&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`);
+    if (data.ok) {
+      result.innerHTML = `
+        <div style="margin-top:12px;padding:16px;background:#f0fdf4;border:2px dashed #86efac;border-radius:12px;text-align:center">
+          <p style="color:#15803d;font-weight:600;margin-bottom:8px">✓ 登录成功 ${data.nickname || ''}</p>
+          <div class="bind-code">${data.bindCode}</div>
+          <p class="hint">请回到游戏, 输入上方 6 位绑定码</p>
+        </div>`;
+    } else {
+      result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">' + (data.message || '登录失败') + '</p>';
+    }
+  } catch (err) {
+    result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">网络错误: ' + err.message + '</p>';
   }
 }
 
