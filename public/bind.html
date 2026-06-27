@@ -25,6 +25,7 @@ h1{text-align:center;font-size:22px;margin:16px 0 8px}
 #status.ok{color:#15803d}
 #status.error{color:#b91c1c}
 #status.expired{color:#b91c1c}
+#status.unknown{color:#d97706}
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid #e4e4e7;border-top-color:var(--c);border-radius:50%;animation:spin .8s linear infinite;margin-right:6px;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
 .bind-code{font-size:42px;font-weight:900;letter-spacing:8px;color:#15803d;text-align:center;padding:16px;background:#f0fdf4;border:2px dashed #86efac;border-radius:12px;margin:12px 0}
@@ -32,13 +33,21 @@ h1{text-align:center;font-size:22px;margin:16px 0 8px}
 .btn-primary{background:#18181b;color:#fff}
 .btn-primary:hover{background:#27272a}
 .btn-primary:disabled{background:#a1a1aa;cursor:not-allowed}
+.btn-secondary{background:#f4f4f5;color:#52525b;border:1px solid #e4e4e7}
+.btn-secondary:hover{background:#e4e4e7}
 .hint{font-size:13px;color:#71717a;margin-top:8px;line-height:1.6}
 .faq{font-size:13px;color:#71717a;margin-top:12px}
 .faq summary{cursor:pointer;font-weight:600;color:#52525b}
 .faq[open] summary{margin-bottom:8px}
 .faq p{margin:4px 0;line-height:1.6}
-.code-box{background:#f4f4f5;padding:12px;border-radius:8px;font-family:monospace;font-size:12px;word-break:break-all;user-select:all;margin:8px 0}
 .ok-badge{display:inline-block;background:#15803d;color:#fff;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:bold}
+.field{margin:12px 0}
+.field label{display:block;font-size:13px;font-weight:600;color:#52525b;margin-bottom:4px}
+.field input{width:100%;padding:10px 12px;border:1px solid #d4d4d8;border-radius:8px;font-size:14px;font-family:monospace}
+.field input:focus{outline:none;border-color:#18181b;box-shadow:0 0 0 3px rgba(0,0,0,.05)}
+.step{background:#f4f4f5;padding:10px 12px;border-radius:8px;margin:6px 0;font-size:13px;line-height:1.6}
+.step b{color:#18181b}
+.mono{font-family:monospace;background:#e4e4e7;padding:2px 6px;border-radius:4px;font-size:12px}
 </style>
 </head>
 <body>
@@ -46,6 +55,7 @@ h1{text-align:center;font-size:22px;margin:16px 0 8px}
 <h1>账号绑定</h1>
 <p class="sub">扫码登录音乐平台, 播放 VIP 歌曲</p>
 
+<!-- ========== 扫码登录 ========== -->
 <div class="card">
   <div class="tabs">
     <div class="tab active" data-platform="qq" style="--c:#d946ef;--bg:#fdf4ff">QQ音乐</div>
@@ -63,24 +73,21 @@ h1{text-align:center;font-size:22px;margin:16px 0 8px}
   </div>
 
   <button class="btn btn-primary" id="startBtn" onclick="startLogin()">生成二维码</button>
-  <p class="hint">用对应平台的手机 APP 扫码登录 (如 QQ 音乐 → QQ 音乐 APP 扫码)</p>
+  <p class="hint" id="qr-hint">用 <b>QQ APP</b> (不是QQ音乐APP) 扫码登录</p>
 </div>
 
-<details class="card faq">
-  <summary>扫不了码? 试试 F12 手动复制 (备用)</summary>
-  <p>如果扫码登录不成功, 可以用传统方式:</p>
-  <p>1. 登录对应平台网页版</p>
-  <p>2. 按 F12 → Console (控制台)</p>
-  <p>3. 粘贴下方代码, 回车, 复制结果到游戏聊天栏</p>
-  <div class="code-box" id="fallback-code"></div>
-  <button class="btn btn-primary" style="margin-top:8px" onclick="copyFallback()">复制代码</button>
+<!-- ========== 手动输入 (备用方式) ========== -->
+<details class="card faq" id="manual-card">
+  <summary>手动输入 Cookie (备用方式) — 扫码不成功时用这个</summary>
+  <div id="manual-area"></div>
 </details>
 
 <details class="card faq">
   <summary>常见问题</summary>
-  <p><b>二维码过期了怎么办?</b> 重新点"生成二维码"即可。</p>
-  <p><b>扫码后没反应?</b> 请确保手机 APP 已登录, 扫码后点"确认登录"。</p>
-  <p><b>绑定码过期了?</b> 5 分钟内有效, 过期请重新扫码。</p>
+  <p><b>QQ音乐扫码显示下载页?</b> 请用 <b>QQ APP</b> 扫码, 不是QQ音乐APP。</p>
+  <p><b>扫码后一直转圈?</b> 等待几秒, 如果超过30秒请重新生成二维码。</p>
+  <p><b>二维码过期了?</b> 重新点"生成二维码"即可。</p>
+  <p><b>绑定码过期了?</b> 5分钟内有效, 过期请重新扫码。</p>
   <p><b>提示"已绑定"?</b> 在游戏内先解绑, 再重新扫码绑定。</p>
 </details>
 </div>
@@ -89,22 +96,30 @@ h1{text-align:center;font-size:22px;margin:16px 0 8px}
 let currentPlatform = 'qq';
 let pollTimer = null;
 let loginToken = null;
+let pollCount = 0;
 
-// 平台配置
 const PLATFORMS = {
-  qq:    { name: 'QQ音乐', site: 'https://y.qq.com/' },
-  kugou: { name: '酷狗',   site: 'https://www.kugou.com/' },
-  kuwo:  { name: '酷我',   site: 'https://www.kuwo.cn/' },
+  qq:    { name: 'QQ音乐', app: 'QQ APP (不是QQ音乐APP)', site: 'https://y.qq.com/' },
+  kugou: { name: '酷狗',   app: '酷狗音乐 APP',           site: 'https://www.kugou.com/' },
+  kuwo:  { name: '酷我',   app: '酷我音乐 APP',           site: 'https://www.kuwo.cn/' },
 };
 
-// F12 备用代码
-const FALLBACK_JS = {
-  qq: "javascript:(function(){var c=document.cookie;var u=(c.match(/\\buin=o?(\\d+)/)||[])[1]||'';var k=(c.match(/qqmusic_key=([^;\\s]+)/)||[])[1]||'';if(u&&k){copy(u+'|'+k);console.log('已复制')}else{console.log('未找到, 请确认已登录')}})()",
-  kugou: "javascript:(function(){var c=document.cookie;var p=[];var uid=c.match(/(?:^|;\\s*)KugooID=([^;]+)/i)||c.match(/(?:^|;\\s*)userid=([^;]+)/i);var tk=c.match(/(?:^|;\\s*)KugooToken=([^;]+)/i)||c.match(/(?:^|;\\s*)token=([^;]+)/i);if(uid)p.push(uid[0].trim());if(tk)p.push(tk[0].trim());if(p.length){copy(p.join('; '));console.log('已复制')}else{console.log('未找到, 请确认已登录')}})()",
-  kuwo: "javascript:(function(){var c=document.cookie;var p=[];var uid=c.match(/(?:^|;\\s*)kw_user_id=([^;]+)/i)||c.match(/(?:^|;\\s*)userid=([^;]+)/i);var tk=c.match(/(?:^|;\\s*)kw_token=([^;]+)/i);if(uid)p.push(uid[0].trim());if(tk)p.push(tk[0].trim());if(p.length){copy(p.join('; '));console.log('已复制')}else{console.log('未找到, 请确认已登录')}})()",
+// 手动输入字段配置
+const MANUAL_FIELDS = {
+  qq: [
+    { key: 'userId', label: 'QQ号 (uin, 纯数字)', placeholder: '如: 2445387644', required: true },
+    { key: 'token', label: 'p_skey (从Cookie中找)', placeholder: '如: A1B2C3...', required: true },
+  ],
+  kugou: [
+    { key: 'userId', label: 'KugooID', placeholder: '从Cookie中找 KugooID', required: true },
+    { key: 'token', label: 'KugooToken', placeholder: '从Cookie中找 KugooToken', required: true },
+  ],
+  kuwo: [
+    { key: 'userId', label: 'kw_user_id', placeholder: '从Cookie中找 kw_user_id', required: true },
+    { key: 'token', label: 'kw_token', placeholder: '从Cookie中找 kw_token', required: true },
+  ],
 };
 
-// API 地址 (从 URL 参数获取, 默认相对路径)
 const API_BASE = new URLSearchParams(location.search).get('api') || '';
 
 // 平台切换
@@ -115,12 +130,10 @@ document.querySelectorAll('.tab').forEach(tab => {
     currentPlatform = tab.dataset.platform;
     stopPoll();
     resetUI();
-    document.getElementById('fallback-code').textContent = FALLBACK_JS[currentPlatform];
+    updateManualFields();
+    document.getElementById('qr-hint').innerHTML = '用 <b>' + PLATFORMS[currentPlatform].app + '</b> 扫码登录';
   });
 });
-
-// 初始化备用代码
-document.getElementById('fallback-code').textContent = FALLBACK_JS.qq;
 
 function resetUI() {
   document.getElementById('qr-box').innerHTML = '<p style="color:#a1a1aa;font-size:14px">点击下方按钮生成二维码</p>';
@@ -129,6 +142,71 @@ function resetUI() {
   document.getElementById('bind-code-area').style.display = 'none';
   document.getElementById('startBtn').textContent = '生成二维码';
   document.getElementById('startBtn').disabled = false;
+  pollCount = 0;
+}
+
+// 更新手动输入字段
+function updateManualFields() {
+  const area = document.getElementById('manual-area');
+  const fields = MANUAL_FIELDS[currentPlatform];
+  const platName = PLATFORMS[currentPlatform].name;
+  const site = PLATFORMS[currentPlatform].site;
+
+  let html = '<p class="hint" style="margin-bottom:12px">如果扫码不成功, 可以手动从浏览器 Cookie 中复制需要的值填入下方:</p>';
+
+  // 步骤说明
+  html += '<div class="step"><b>步骤1:</b> 打开 <span class="mono">' + site + '</span> 并登录</div>';
+  html += '<div class="step"><b>步骤2:</b> 按 <span class="mono">F12</span> → 点击 <b>Application</b> (应用) 标签</div>';
+  html += '<div class="step"><b>步骤3:</b> 左侧 <b>Cookies</b> → 点击网站域名</div>';
+  html += '<div class="step"><b>步骤4:</b> 找到下方字段名, 复制对应的 Value 填入下方输入框</div>';
+
+  // 输入框
+  fields.forEach(f => {
+    html += '<div class="field">';
+    html += '<label>' + f.label + (f.required ? ' <span style="color:#b91c1c">*</span>' : '') + '</label>';
+    html += '<input type="text" id="manual-' + f.key + '" placeholder="' + f.placeholder + '" autocomplete="off">';
+    html += '</div>';
+  });
+
+  html += '<button class="btn btn-primary" style="margin-top:12px" onclick="submitManual()">提交绑定</button>';
+  html += '<div id="manual-result"></div>';
+
+  area.innerHTML = html;
+}
+
+// 提交手动绑定
+async function submitManual() {
+  const fields = MANUAL_FIELDS[currentPlatform];
+  const params = new URLSearchParams();
+  params.set('platform', currentPlatform);
+
+  for (const f of fields) {
+    const val = document.getElementById('manual-' + f.key).value.trim();
+    if (f.required && !val) {
+      document.getElementById('manual-result').innerHTML = '<p style="color:#b91c1c;margin-top:8px">请填写: ' + f.label + '</p>';
+      return;
+    }
+    if (val) params.set(f.key, val);
+  }
+
+  document.getElementById('manual-result').innerHTML = '<p style="color:#71717a;margin-top:8px">正在提交...</p>';
+
+  try {
+    const resp = await fetch(`${API_BASE}/api?action=manual_bind&${params.toString()}`);
+    const data = await resp.json();
+    if (data.ok) {
+      document.getElementById('manual-result').innerHTML = `
+        <div style="margin-top:12px;padding:16px;background:#f0fdf4;border:2px dashed #86efac;border-radius:12px;text-align:center">
+          <p style="color:#15803d;font-weight:600;margin-bottom:8px">绑定成功!</p>
+          <div class="bind-code">${data.bindCode}</div>
+          <p class="hint">请回到游戏, 输入上方 6 位绑定码</p>
+        </div>`;
+    } else {
+      document.getElementById('manual-result').innerHTML = '<p style="color:#b91c1c;margin-top:8px">' + (data.message || '提交失败') + '</p>';
+    }
+  } catch (err) {
+    document.getElementById('manual-result').innerHTML = '<p style="color:#b91c1c;margin-top:8px">网络错误: ' + err.message + '</p>';
+  }
 }
 
 // 开始扫码登录
@@ -142,6 +220,7 @@ async function startLogin() {
   status.className = 'waiting';
   status.innerHTML = '<span class="spinner"></span>正在获取二维码...';
   document.getElementById('bind-code-area').style.display = 'none';
+  pollCount = 0;
 
   try {
     const resp = await fetch(`${API_BASE}/api?action=qr_create&server=${currentPlatform}`);
@@ -152,13 +231,14 @@ async function startLogin() {
       status.textContent = data.message || '获取二维码失败';
       btn.disabled = false;
       btn.textContent = '重新生成二维码';
+      // 自动展开手动输入
+      document.getElementById('manual-card').open = true;
       return;
     }
 
     loginToken = data.token;
     qrBox.innerHTML = '';
 
-    // 如果有 qrContent (酷狗/酷我), 用 qrcode.js 生成二维码
     if (data.qrContent) {
       new QRCode(qrBox, {
         text: data.qrContent,
@@ -168,7 +248,6 @@ async function startLogin() {
         colorLight: '#ffffff',
       });
     } else if (data.qrUrl) {
-      // QQ 返回的是图片 URL
       qrBox.innerHTML = `<img src="${data.qrUrl}" width="200" height="200" alt="二维码">`;
     } else {
       status.className = 'error';
@@ -179,11 +258,10 @@ async function startLogin() {
     }
 
     status.className = 'waiting';
-    status.innerHTML = '<span class="spinner"></span>请用' + PLATFORMS[currentPlatform].name + ' APP 扫码';
+    status.innerHTML = '<span class="spinner"></span>请用 ' + PLATFORMS[currentPlatform].app + ' 扫码';
     btn.textContent = '重新生成二维码';
     btn.disabled = false;
 
-    // 开始轮询
     startPoll();
   } catch (err) {
     status.className = 'error';
@@ -205,6 +283,17 @@ function stopPoll() {
 async function pollStatus() {
   if (!loginToken) return;
   const status = document.getElementById('status');
+  pollCount++;
+
+  // 超过 60 次 (2分钟) 自动停止
+  if (pollCount > 60) {
+    stopPoll();
+    status.className = 'expired';
+    status.textContent = '等待超时, 请重新生成二维码';
+    document.getElementById('startBtn').textContent = '重新生成二维码';
+    document.getElementById('startBtn').disabled = false;
+    return;
+  }
 
   try {
     const resp = await fetch(`${API_BASE}/api?action=qr_check&server=${currentPlatform}&token=${loginToken}`);
@@ -212,7 +301,7 @@ async function pollStatus() {
 
     if (data.status === 'waiting') {
       status.className = 'waiting';
-      status.innerHTML = '<span class="spinner"></span>请用' + PLATFORMS[currentPlatform].name + ' APP 扫码';
+      status.innerHTML = '<span class="spinner"></span>请用 ' + PLATFORMS[currentPlatform].app + ' 扫码';
     } else if (data.status === 'scanned') {
       status.className = 'scanned';
       status.innerHTML = '✓ 已扫码, 请在手机上点击确认登录';
@@ -220,7 +309,6 @@ async function pollStatus() {
       stopPoll();
       status.className = 'ok';
       status.innerHTML = '<span class="ok-badge">✓ 登录成功</span> ' + (data.nickname || '');
-      // 显示绑定码
       if (data.bindCode) {
         document.getElementById('bind-code').textContent = data.bindCode;
         document.getElementById('bind-code-area').style.display = 'block';
@@ -230,7 +318,7 @@ async function pollStatus() {
     } else if (data.status === 'expired') {
       stopPoll();
       status.className = 'expired';
-      status.textContent = '二维码已过期, 请重新生成';
+      status.textContent = data.message || '二维码已过期, 请重新生成';
       document.getElementById('startBtn').textContent = '重新生成二维码';
       document.getElementById('startBtn').disabled = false;
     } else if (data.status === 'error') {
@@ -239,27 +327,18 @@ async function pollStatus() {
       status.textContent = data.message || '登录失败';
       document.getElementById('startBtn').textContent = '重新生成二维码';
       document.getElementById('startBtn').disabled = false;
+    } else if (data.status === 'unknown') {
+      // QQ扫码返回unknown时, 显示具体原因但不停止轮询
+      status.className = 'unknown';
+      status.innerHTML = '<span class="spinner"></span>' + (data.message || '正在等待登录结果...');
     }
   } catch (err) {
-    // 网络错误不停止轮询, 继续重试
+    // 网络错误不停止轮询
   }
 }
 
-// 复制备用代码
-function copyFallback() {
-  const code = FALLBACK_JS[currentPlatform];
-  navigator.clipboard.writeText(code).then(() => {
-    alert('代码已复制! 去浏览器控制台粘贴并回车');
-  }).catch(() => {
-    const el = document.getElementById('fallback-code');
-    const range = document.createRange();
-    range.selectNode(el);
-    window.getSelection().removeAllRanges();
-    window.getSelection().addRange(range);
-    document.execCommand('copy');
-    alert('代码已复制! 去浏览器控制台粘贴并回车');
-  });
-}
+// 初始化
+updateManualFields();
 </script>
 </body>
 </html>
