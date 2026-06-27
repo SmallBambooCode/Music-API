@@ -1,4 +1,4 @@
-# Ourcraft Music API v0.16.0
+# Ourcraft Music API v0.19.0
 
 多平台音乐 API 服务端 (网易云 / 酷狗 / 酷我 / QQ音乐), 兼容 MetingJS 格式。
 
