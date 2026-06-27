@@ -25,35 +25,31 @@ body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-seri
 </div>
 
 <script>
+// 所有平台统一使用 "复制完整 document.cookie" 方式
+// 服务端会把整个 cookie 字符串透传给对应平台的 API
 const PLATFORMS = {
   qq: {
     name: 'QQ音乐',
     site: 'https://y.qq.com/',
     color: '#d946ef',
-    // QQ 音乐 cookie 非 HttpOnly, 可直接 document.cookie 读取
-    js: "javascript:var uin=document.cookie.match(/uin=([^;]+)/);var key=document.cookie.match(/qqmusic_key=([^;]+)/);if(uin&&key){copy(uin[1].replace(/^o0*/,'').replace(/^o/,'')+'|'+key[1]);console.log('已复制到剪贴板:\\n'+uin[1].replace(/^o0*/,'').replace(/^o/,'')+'|'+key[1])}else{console.log('未登录QQ音乐, 请先登录 y.qq.com')}"
-  },
-  netease: {
-    name: '网易云',
-    site: 'https://music.163.com/',
-    color: '#dc2626',
-    // 网易云 MUSIC_U 是 HttpOnly, document.cookie 读不到
-    // 用户需要在 F12 > Application > Cookies 手动复制 MUSIC_U 和 __csrf 的值
-    manual: true,
-    manualStep: '1. 登录 music.163.com<br>2. 按 F12 打开开发者工具<br>3. 切换到 Application (应用) 标签<br>4. 左侧 Cookies → https://music.163.com<br>5. 找到 MUSIC_U, 复制它的值<br>6. 找到 __csrf, 复制它的值<br>7. 在游戏里输入: MUSIC_U的值|__csrf的值',
-    js: "javascript:var mu=document.cookie.match(/MUSIC_U=([^;]+)/);var csrf=document.cookie.match(/__csrf=([^;]+)/);if(mu&&csrf){copy(mu[1]+'|'+csrf[1]);console.log('已复制到剪贴板:\\n'+mu[1]+'|'+csrf[1])}else{console.log('MUSIC_U 是 HttpOnly, document.cookie 读不到. 请用 F12 > Application > Cookies 手动复制')}"
+    // QQ 音乐 cookie 非 HttpOnly, 可直接复制完整 cookie
+    js: "javascript:copy(document.cookie);console.log('已复制到剪贴板:\\n'+document.cookie)"
   },
   kugou: {
     name: '酷狗',
     site: 'https://www.kugou.com/',
     color: '#16a34a',
-    js: "javascript:var u=document.cookie.match(/userid=([^;]+)/),t=document.cookie.match(/token=([^;]+)/);copy(u&&t?('userid='+u[1]+'; token='+t[1]):'');console.log(u&&t?'已复制到剪贴板:\\nuserid='+u[1]+'; token='+t[1]:'未登录酷狗')"
+    // 酷狗登录态分散在多个 cookie 字段 (KugooID/KugooToken/vip_token 等)
+    // 直接复制全部 cookie 让服务端透传, 最稳
+    js: "javascript:copy(document.cookie);console.log('已复制到剪贴板:\\n'+document.cookie)"
   },
   kuwo: {
     name: '酷我',
     site: 'https://www.kuwo.cn/',
     color: '#ea580c',
-    js: "javascript:var t=document.cookie.match(/kw_token=([^;]+)/),u=document.cookie.match(/kw_user_id=([^;]+)/);copy(t&&u?('kw_token='+t[1]+'; kw_user_id='+u[1]):'');console.log(t&&u?'已复制到剪贴板:\\nkw_token='+t[1]+'; kw_user_id='+u[1]:'未登录酷我')"
+    // 酷我 kw_user_id 可能是 HttpOnly, 但 kw_token 等其他字段可读
+    // 复制全部 cookie 让服务端透传
+    js: "javascript:copy(document.cookie);console.log('已复制到剪贴板:\\n'+document.cookie)"
   }
 };
 
@@ -64,22 +60,7 @@ const meta = PLATFORMS[platform] || PLATFORMS.kugou;
 document.title = meta.name + ' 账号绑定教程';
 document.getElementById('title').textContent = meta.name + ' 账号绑定教程';
 
-document.getElementById('content').innerHTML = meta.manual ? `
-  <div class="step">
-    <div class="step-num">1</div>
-    <div class="step-text">先登录 <span class="link" onclick="window.open('${meta.site}','_blank')">${meta.site}</span></div>
-  </div>
-  <div class="step">
-    <div class="step-num">2</div>
-    <div class="step-text">${meta.manualStep}</div>
-  </div>
-  <hr style="margin:20px 0;border:none;border-top:1px solid #e4e4e7">
-  <p style="font-size:14px;color:#71717a">网易云的 <b>MUSIC_U</b> cookie 是 HttpOnly, JavaScript 无法读取, 只能手动复制。<br>格式: <b>MUSIC_U的值|__csrf的值</b> (用竖线 | 分隔)</p>
-  <p style="font-size:14px;color:#dc2626"><b>提示</b>: 也可以先试试下面的脚本, 如果浏览器能读到就直接复制:</p>
-  <div class="code-box" id="code">${escapeHtml(meta.js)}</div>
-  <button class="btn" id="copyBtn" onclick="copyCode()">📋 一键复制代码</button>
-  <div id="result" style="margin-top:12px"></div>
-` : `
+document.getElementById('content').innerHTML = `
   <div class="step">
     <div class="step-num">1</div>
     <div class="step-text">先登录 <span class="link" onclick="window.open('${meta.site}','_blank')">${meta.site}</span></div>
@@ -97,6 +78,7 @@ document.getElementById('content').innerHTML = meta.manual ? `
   <div id="result" style="margin-top:12px"></div>
   <hr style="margin:20px 0;border:none;border-top:1px solid #e4e4e7">
   <p style="font-size:14px;color:#71717a">控制台显示 <b style="color:#15803d">已复制到剪贴板</b> 后，回到游戏按 <b>Ctrl+V</b> 粘贴到聊天栏，回车即可完成绑定。</p>
+  <p style="font-size:13px;color:#71717a">说明: 此脚本会复制浏览器中所有可见的 cookie (非 HttpOnly), 服务端会原样透传给对应音乐平台 API, 不需要您手动找字段名。</p>
 `;
 
 function escapeHtml(s) {
