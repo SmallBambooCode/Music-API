@@ -26,6 +26,18 @@ body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-seri
 
 <script>
 const PLATFORMS = {
+  qq: {
+    name: 'QQ音乐',
+    site: 'https://y.qq.com/',
+    color: '#d946ef',
+    js: "javascript:var uin=document.cookie.match(/uin=([^;]+)/);var key=document.cookie.match(/qqmusic_key=([^;]+)/);if(uin&&key){copy(uin[1].replace(/^o0*/,'').replace(/^o/,'')+'|'+key[1]);console.log('已复制到剪贴板:\\n'+uin[1].replace(/^o0*/,'').replace(/^o/,'')+'|'+key[1])}else{console.log('未登录QQ音乐, 请先登录 y.qq.com')}"
+  },
+  netease: {
+    name: '网易云',
+    site: 'https://music.163.com/',
+    color: '#dc2626',
+    js: "javascript:var mu=document.cookie.match(/MUSIC_U=([^;]+)/);var csrf=document.cookie.match(/__csrf=([^;]+)/);if(mu&&csrf){copy(mu[1]+'|'+csrf[1]);console.log('已复制到剪贴板:\\n'+mu[1]+'|'+csrf[1])}else{console.log('未登录网易云, 请先登录 music.163.com')}"
+  },
   kugou: {
     name: '酷狗',
     site: 'https://www.kugou.com/',
