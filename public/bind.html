@@ -25,31 +25,29 @@ body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-seri
 </div>
 
 <script>
-// 所有平台统一使用 "复制完整 document.cookie" 方式
-// 服务端会把整个 cookie 字符串透传给对应平台的 API
+// v2.4.1: 浏览器端提取关键字段, 生成短字符串 (避免 Minecraft 聊天栏 256 字符限制截断)
+// 每个平台的 jsCode 在目标网站的控制台执行, 只提取登录所需字段
 const PLATFORMS = {
   qq: {
     name: 'QQ音乐',
     site: 'https://y.qq.com/',
     color: '#d946ef',
-    // QQ 音乐 cookie 非 HttpOnly, 可直接复制完整 cookie
-    js: "javascript:copy(document.cookie);console.log('已复制到剪贴板:\\n'+document.cookie)"
+    // QQ 只需 uin 和 qqmusic_key, 格式: uin|qqmusic_key (约100字符, 远小于256限制)
+    js: "javascript:(function(){var c=document.cookie;var u=(c.match(/\\buin=o?(\\d+)/)||[])[1]||'';var k=(c.match(/qqmusic_key=([^;\\s]+)/)||[])[1]||'';if(u&&k){copy(u+'|'+k);console.log('已复制 QQ 登录信息:\\nuin='+u+'\\nqqmusic_key='+k.slice(0,20)+'...')}else{console.log('未找到 uin 或 qqmusic_key, 请确认已在 y.qq.com 登录')}})()"
   },
   kugou: {
     name: '酷狗',
     site: 'https://www.kugou.com/',
     color: '#16a34a',
-    // 酷狗登录态分散在多个 cookie 字段 (KugooID/KugooToken/vip_token 等)
-    // 直接复制全部 cookie 让服务端透传, 最稳
-    js: "javascript:copy(document.cookie);console.log('已复制到剪贴板:\\n'+document.cookie)"
+    // 酷狗提取 KugooID/KugooToken 或 userid/token, 格式: KugooID=xxx; KugooToken=yyy
+    js: "javascript:(function(){var c=document.cookie;var p=[];var uid=c.match(/(?:^|;\\s*)KugooID=([^;]+)/i)||c.match(/(?:^|;\\s*)userid=([^;]+)/i);var tk=c.match(/(?:^|;\\s*)KugooToken=([^;]+)/i)||c.match(/(?:^|;\\s*)token=([^;]+)/i);if(uid)p.push(uid[0].trim());if(tk)p.push(tk[0].trim());if(p.length){copy(p.join('; '));console.log('已复制酷狗登录信息:\\n'+p.join('; '))}else{console.log('未找到酷狗登录字段, 请确认已登录')}})()"
   },
   kuwo: {
     name: '酷我',
     site: 'https://www.kuwo.cn/',
     color: '#ea580c',
-    // 酷我 kw_user_id 可能是 HttpOnly, 但 kw_token 等其他字段可读
-    // 复制全部 cookie 让服务端透传
-    js: "javascript:copy(document.cookie);console.log('已复制到剪贴板:\\n'+document.cookie)"
+    // 酷我提取 kw_user_id/kw_token, 格式: kw_user_id=xxx; kw_token=yyy
+    js: "javascript:(function(){var c=document.cookie;var p=[];var uid=c.match(/(?:^|;\\s*)kw_user_id=([^;]+)/i)||c.match(/(?:^|;\\s*)userid=([^;]+)/i);var tk=c.match(/(?:^|;\\s*)kw_token=([^;]+)/i);if(uid)p.push(uid[0].trim());if(tk)p.push(tk[0].trim());if(p.length){copy(p.join('; '));console.log('已复制酷我登录信息:\\n'+p.join('; '))}else{console.log('未找到酷我登录字段, 请确认已登录')}})()"
   }
 };
 
@@ -84,8 +82,8 @@ document.getElementById('content').innerHTML = `
     <p style="margin:6px 0 0;font-size:13px;color:#9a3412">③ 然后再次粘贴我们的代码，按回车即可</p>
   </div>
   <hr style="margin:20px 0;border:none;border-top:1px solid #e4e4e7">
-  <p style="font-size:14px;color:#71717a">控制台显示 <b style="color:#15803d">已复制到剪贴板</b> 后，回到游戏按 <b>Ctrl+V</b> 粘贴到聊天栏，回车即可完成绑定。</p>
-  <p style="font-size:13px;color:#71717a">说明: 此脚本会复制浏览器中所有可见的 cookie (非 HttpOnly), 服务端会原样透传给对应音乐平台 API, 不需要您手动找字段名。</p>
+  <p style="font-size:14px;color:#71717a">控制台显示 <b style="color:#15803d">已复制</b> 后，回到游戏按 <b>Ctrl+V</b> 粘贴到聊天栏，回车即可完成绑定。</p>
+  <p style="font-size:13px;color:#71717a">说明: 代码会自动提取登录关键字段 (非完整 cookie)，字符串很短，可以直接粘贴到游戏聊天栏。</p>
 `;
 
 function escapeHtml(s) {
@@ -101,7 +99,6 @@ async function copyCode() {
     btn.style.background = '#15803d';
     result.innerHTML = '<p class="ok">代码已复制到剪贴板！现在去浏览器控制台粘贴并回车。</p>';
   } catch(e) {
-    // fallback: 选中文本
     const codeEl = document.getElementById('code');
     const range = document.createRange();
     range.selectNode(codeEl);
