@@ -1,6 +1,6 @@
 {
   "name": "ourcraft-music-api",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "private": true,
   "description": "Ourcraft Music API — multi-platform (netease/kugou/kuwo/qq/bilibili) with QQ VIP cross-platform unblock + playlist search",
   "type": "commonjs",
