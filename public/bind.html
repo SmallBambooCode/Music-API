@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>账号绑定教程</title>
+<style>
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:680px;margin:40px auto;padding:0 18px;line-height:1.65;background:#fafafa;color:#18181b}
+.card{background:#fff;border:1px solid #e4e4e7;border-radius:16px;padding:18px;margin:16px 0}
+.btn{font:inherit;padding:10px 18px;border:1px solid #18181b;border-radius:8px;background:#18181b;color:#fff;cursor:pointer;font-size:15px;width:100%}
+.btn:hover{background:#27272a}
+.code-box{background:#f4f4f5;padding:14px;border-radius:10px;font-family:monospace;font-size:13px;word-break:break-all;user-select:all;margin:12px 0}
+.step{display:flex;gap:12px;margin:12px 0}
+.step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold}
+.step-text{flex:1;padding-top:3px}
+.ok{color:#15803d;font-weight:bold}
+.err{color:#b91c1c}
+.link{color:#2563eb;text-decoration:underline;cursor:pointer}
+</style>
+</head>
+<body>
+<h1 id="title">账号绑定教程</h1>
+<div class="card" id="content">
+  <p style="text-align:center;color:#71717a">加载中...</p>
+</div>
+
+<script>
+const PLATFORMS = {
+  kugou: {
+    name: '酷狗',
+    site: 'https://www.kugou.com/',
+    color: '#16a34a',
+    js: "javascript:var u=document.cookie.match(/userid=([^;]+)/),t=document.cookie.match(/token=([^;]+)/);copy(u&&t?('userid='+u[1]+'; token='+t[1]):'');console.log(u&&t?'已复制到剪贴板:\\nuserid='+u[1]+'; token='+t[1]:'未登录酷狗')"
+  },
+  kuwo: {
+    name: '酷我',
+    site: 'https://www.kuwo.cn/',
+    color: '#ea580c',
+    js: "javascript:var t=document.cookie.match(/kw_token=([^;]+)/),u=document.cookie.match(/kw_user_id=([^;]+)/);copy(t&&u?('kw_token='+t[1]+'; kw_user_id='+u[1]):'');console.log(t&&u?'已复制到剪贴板:\\nkw_token='+t[1]+'; kw_user_id='+u[1]:'未登录酷我')"
+  }
+};
+
+const params = new URLSearchParams(location.search);
+const platform = params.get('platform') || 'kugou';
+const meta = PLATFORMS[platform] || PLATFORMS.kugou;
+
+document.title = meta.name + ' 账号绑定教程';
+document.getElementById('title').textContent = meta.name + ' 账号绑定教程';
+
+document.getElementById('content').innerHTML = `
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-text">先登录 <span class="link" onclick="window.open('${meta.site}','_blank')">${meta.site}</span></div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-text">在登录后的页面按 <b>F12</b>，点击 <b>Console</b> (控制台) 标签</div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-text">点击下面按钮复制代码，粘贴到控制台，按回车</div>
+  </div>
+  <div class="code-box" id="code">${escapeHtml(meta.js)}</div>
+  <button class="btn" id="copyBtn" onclick="copyCode()">📋 一键复制代码</button>
+  <div id="result" style="margin-top:12px"></div>
+  <hr style="margin:20px 0;border:none;border-top:1px solid #e4e4e7">
+  <p style="font-size:14px;color:#71717a">控制台显示 <b style="color:#15803d">已复制到剪贴板</b> 后，回到游戏按 <b>Ctrl+V</b> 粘贴到聊天栏，回车即可完成绑定。</p>
+`;
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function copyCode() {
+  const btn = document.getElementById('copyBtn');
+  const result = document.getElementById('result');
+  try {
+    await navigator.clipboard.writeText(meta.js);
+    btn.textContent = '✅ 已复制！';
+    btn.style.background = '#15803d';
+    result.innerHTML = '<p class="ok">代码已复制到剪贴板！现在去浏览器控制台粘贴并回车。</p>';
+  } catch(e) {
+    // fallback: 选中文本
+    const codeEl = document.getElementById('code');
+    const range = document.createRange();
+    range.selectNode(codeEl);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    document.execCommand('copy');
+    btn.textContent = '✅ 已复制！';
+    result.innerHTML = '<p class="ok">代码已复制！现在去浏览器控制台粘贴并回车。</p>';
+  }
+  setTimeout(() => {
+    btn.textContent = '📋 一键复制代码';
+    btn.style.background = '#18181b';
+  }, 3000);
+}
+</script>
+</body>
+</html>
