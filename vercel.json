@@ -32,6 +32,14 @@
     {
       "source": "/proxy",
       "destination": "/api/index.js"
+    },
+    {
+      "source": "/qr/qq",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/qr/netease",
+      "destination": "/api/index.js"
     }
   ],
   "functions": {
