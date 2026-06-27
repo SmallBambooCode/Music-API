@@ -193,7 +193,9 @@ async function submitManual() {
 
   try {
     const resp = await fetch(`${API_BASE}/api?action=manual_bind&${params.toString()}`);
-    const data = await resp.json();
+    const text = await resp.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = { ok: false, message: '服务器异常, 请稍后重试' }; }
     if (data.ok) {
       document.getElementById('manual-result').innerHTML = `
         <div style="margin-top:12px;padding:16px;background:#f0fdf4;border:2px dashed #86efac;border-radius:12px;text-align:center">
@@ -206,6 +208,21 @@ async function submitManual() {
     }
   } catch (err) {
     document.getElementById('manual-result').innerHTML = '<p style="color:#b91c1c;margin-top:8px">网络错误: ' + err.message + '</p>';
+  }
+}
+
+// 安全 fetch: 处理非 JSON 响应 (Vercel 超时返回 HTML)
+async function safeFetch(url) {
+  const resp = await fetch(url);
+  const text = await resp.text();
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    // Vercel 超时或服务端返回 HTML 错误页
+    if (text.startsWith('<') || text.startsWith('<!DOCTYPE')) {
+      return { ok: false, message: '服务器繁忙或超时, 请重试或用手动输入方式' };
+    }
+    return { ok: false, message: '服务器返回异常: ' + text.slice(0, 100) };
   }
 }
 
@@ -223,8 +240,7 @@ async function startLogin() {
   pollCount = 0;
 
   try {
-    const resp = await fetch(`${API_BASE}/api?action=qr_create&server=${currentPlatform}`);
-    const data = await resp.json();
+    const data = await safeFetch(`${API_BASE}/api?action=qr_create&server=${currentPlatform}`);
 
     if (!data.ok) {
       status.className = 'error';
@@ -296,8 +312,7 @@ async function pollStatus() {
   }
 
   try {
-    const resp = await fetch(`${API_BASE}/api?action=qr_check&server=${currentPlatform}&token=${loginToken}`);
-    const data = await resp.json();
+    const data = await safeFetch(`${API_BASE}/api?action=qr_check&server=${currentPlatform}&token=${loginToken}`);
 
     if (data.status === 'waiting') {
       status.className = 'waiting';
