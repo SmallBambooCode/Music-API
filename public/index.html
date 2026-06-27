@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ourcraft Music API</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;max-width:1100px;margin:0 auto;padding:24px 20px 60px;line-height:1.65;background:#fafafa;color:#18181b}
+header{border-bottom:2px solid #18181b;padding-bottom:16px;margin-bottom:24px}
+h1{margin:0 0 6px;font-size:28px;font-weight:700;letter-spacing:-.5px}
+h2{margin:0 0 12px;font-size:18px;font-weight:600}
+.subtitle{color:#52525b;font-size:15px;margin:0}
+.badges{margin:12px 0 0;display:flex;flex-wrap:wrap;gap:6px}
+.badges img{display:block;height:20px}
+.nav{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0}
+.nav a{display:inline-block;padding:6px 14px;border:1px solid #d4d4d8;border-radius:8px;text-decoration:none;color:#18181b;background:#fff;font-size:14px;transition:all .15s}
+.nav a:hover{border-color:#18181b;background:#18181b;color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-top:16px}
+.card{background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:18px}
+input,select{font:inherit;padding:8px 10px;border:1px solid #d4d4d8;border-radius:8px;width:100%;max-width:240px;box-sizing:border-box}
+button{font:inherit;padding:8px 14px;border:1px solid #18181b;border-radius:8px;background:#18181b;color:#fff;cursor:pointer;margin:6px 4px 0 0;transition:all .15s}
+button:hover{background:#3f3f46;border-color:#3f3f46}
+button.secondary{background:#fff;color:#18181b}
+button.secondary:hover{background:#f4f4f5}
+audio{width:100%;margin-top:12px}
+pre{background:#f4f4f5;padding:12px;border-radius:8px;overflow:auto;max-height:360px;white-space:pre-wrap;font-size:13px;margin:8px 0 0}
+code{background:#f4f4f5;padding:2px 6px;border-radius:4px;font-size:13px}
+.desc{color:#52525b;font-size:14px;margin:0 0 8px}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;margin:2px 4px 2px 0}
+.tag.netease{background:#fee2e2;color:#b91c1c}
+.tag.qq{background:#fce7f3;color:#be185d}
+.tag.kugou{background:#dcfce7;color:#15803d}
+.tag.kuwo{background:#fef3c7;color:#a16207}
+footer{margin-top:40px;padding-top:16px;border-top:1px solid #e4e4e7;color:#71717a;font-size:13px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Ourcraft Music API</h1>
+  <p class="subtitle">多平台音乐聚合 API · 支持网易云 / QQ / 酷狗 / 酷我</p>
+  <div class="badges">
+    <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white">
+    <img alt="Platform" src="https://img.shields.io/badge/平台-网易云%20%7C%20QQ%20%7C%20酷狗%20%7C%20酷我-18181b">
+    <img alt="License" src="https://img.shields.io/badge/许可-AGPL--3.0-blue">
+    <img alt="MetingJS" src="https://img.shields.io/badge/MetingJS-兼容-ff6b6b">
+  </div>
+  <div class="nav">
+    <a href="/admin">白名单管理</a>
+    <a href="/bind">账号绑定</a>
+    <a href="/api?action=health" target="_blank">健康检查</a>
+    <a href="https://github.com/Yuncan050115/ourcraft-music-api" target="_blank">GitHub</a>
+  </div>
+</header>
+
+<section>
+  <h2>简介</h2>
+  <p class="desc">
+    本服务为 <strong>Ourcraft</strong> 项目提供统一的音乐接口, 同时可作为独立 API 服务于以下客户端:
+  </p>
+  <p>
+    <span class="tag netease">MetingJS</span>
+    <span class="tag qq">Minecraft ZMusicGUI</span>
+    <span class="tag kugou">Node.js 应用</span>
+    <span class="tag kuwo">其他 HTTP 客户端</span>
+  </p>
+  <p class="desc" style="margin-top:10px">
+    所有接口通过 <code>/api</code> 入口, 兼容 MetingJS 格式, 可直接用于 APlayer / MetingJS 播放器.
+  </p>
+</section>
+
+<div class="grid">
+  <div class="card">
+    <h2>音乐检测</h2>
+    <p class="desc">输入歌曲 ID, 测试播放 URL 是否可用 (默认网易云).</p>
+    <p>
+      平台:
+      <select id="server">
+        <option value="netease">网易云</option>
+        <option value="qq">QQ 音乐</option>
+        <option value="kugou">酷狗</option>
+        <option value="kuwo">酷我</option>
+      </select>
+    </p>
+    <p>
+      歌曲 ID / 关键词:
+      <input id="songId" value="174944" placeholder="网易云歌曲 ID">
+    </p>
+    <p>
+      <button onclick="testUrl()">测试播放</button>
+      <button class="secondary" onclick="openUrlJson()">查看 JSON</button>
+      <button class="secondary" onclick="probeFull()">完整信息</button>
+    </p>
+    <audio id="audio" controls preload="none"></audio>
+    <pre id="urlOut">等待测试...</pre>
+  </div>
+
+  <div class="card">
+    <h2>搜索</h2>
+    <p class="desc">按关键词搜索歌曲 (MetingJS 格式).</p>
+    <p>关键词: <input id="searchKeyword" value="周杰伦"></p>
+    <p>数量: <input id="searchLimit" value="5"></p>
+    <p>
+      <button onclick="testSearch()">搜索</button>
+    </p>
+    <pre id="searchOut">等待测试...</pre>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>歌单</h2>
+    <p class="desc">获取歌单内歌曲列表 (MetingJS 格式).</p>
+    <p>歌单 ID: <input id="playlistId" value="60198"></p>
+    <p>数量: <input id="playlistLimit" value="5"></p>
+    <p>
+      <button onclick="testPlaylist()">获取歌单</button>
+    </p>
+    <pre id="playlistOut">等待测试...</pre>
+  </div>
+
+  <div class="card">
+    <h2>歌曲详情 / 歌词</h2>
+    <p class="desc">获取单曲详情、歌词、可用性.</p>
+    <p>歌曲 ID: <input id="detailSongId" value="174944"></p>
+    <p>
+      <button onclick="testSong()">单曲格式</button>
+      <button class="secondary" onclick="checkMusic()">可用性</button>
+      <button class="secondary" onclick="getLyric()">歌词</button>
+    </p>
+    <pre id="songOut">等待测试...</pre>
+  </div>
+</div>
+
+<section>
+  <h2>API 用法示例</h2>
+  <pre><code># MetingJS 兼容格式 (默认)
+GET /api?server=netease&type=url&id=174944
+GET /api?server=netease&type=search&id=周杰伦&amp;limit=10
+GET /api?server=netease&type=playlist&amp;id=60198&amp;limit=100
+GET /api?server=qq&amp;type=song&amp;id=0039MnYb0qxYhV
+
+# JSON 输出 (非 302 跳转)
+GET /api?server=netease&amp;type=url&amp;id=174944&amp;json=1
+
+# 健康检查
+GET /api?action=health
+
+# 多平台 (server 参数)
+# netease | qq | kugou | kuwo</code></pre>
+</section>
+
+<footer>
+  Ourcraft Music API · 服务端由 Node.js 驱动 ·
+  <a href="https://github.com/Yuncan050115/ourcraft-music-api" target="_blank" style="color:#71717a">GitHub</a>
+</footer>
+
+<script>
+function val(id){ return document.getElementById(id).value.trim(); }
+async function pretty(res) {
+  try { return JSON.stringify(await res.json(), null, 2); }
+  catch { return await res.text(); }
+}
+function apiUrl(server, type, id, extra='') {
+  return '/api?server=' + encodeURIComponent(server) + '&type=' + type + '&id=' + encodeURIComponent(id) + extra;
+}
+async function testUrl(){
+  const server = document.getElementById('server').value;
+  const id = val('songId');
+  const jsonUrl = apiUrl(server, 'url', id, '&json=1&debug=1');
+  const res = await fetch(jsonUrl);
+  const text = await pretty(res);
+  document.getElementById('urlOut').textContent = text;
+  try {
+    const data = JSON.parse(text);
+    if (data.ok && data.url) {
+      const audio = document.getElementById('audio');
+      audio.src = apiUrl(server, 'url', id);
+      audio.load();
+      try { await audio.play(); } catch(e) {}
+    }
+  } catch {}
+}
+function openUrlJson(){
+  const server = document.getElementById('server').value;
+  window.open(apiUrl(server, 'url', val('songId'), '&json=1&debug=1'), '_blank');
+}
+async function probeFull(){
+  const server = document.getElementById('server').value;
+  const res = await fetch(apiUrl(server, 'song_full', val('songId'), '&debug=1'));
+  document.getElementById('urlOut').textContent = await pretty(res);
+}
+async function testPlaylist(){
+  const server = document.getElementById('server').value;
+  const res = await fetch(apiUrl(server, 'playlist', val('playlistId'), '&limit=' + encodeURIComponent(val('playlistLimit')) + '&debug=1'));
+  document.getElementById('playlistOut').textContent = await pretty(res);
+}
+async function testSearch(){
+  const server = document.getElementById('server').value;
+  const res = await fetch(apiUrl(server, 'search', val('searchKeyword'), '&limit=' + encodeURIComponent(val('searchLimit')) + '&debug=1'));
+  document.getElementById('searchOut').textContent = await pretty(res);
+}
+async function testSong(){
+  const server = document.getElementById('server').value;
+  const res = await fetch(apiUrl(server, 'song', val('detailSongId'), '&debug=1'));
+  document.getElementById('songOut').textContent = await pretty(res);
+}
+async function checkMusic(){
+  const res = await fetch('/api?action=enhanced&path=/check/music&id=' + encodeURIComponent(val('detailSongId')));
+  document.getElementById('songOut').textContent = await pretty(res);
+}
+async function getLyric(){
+  const res = await fetch('/api?action=enhanced&path=/lyric&id=' + encodeURIComponent(val('detailSongId')));
+  document.getElementById('songOut').textContent = await pretty(res);
+}
+</script>
+</body>
+</html>

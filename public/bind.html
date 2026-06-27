@@ -3,8 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>账号绑定 — 扫码登录</title>
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<title>账号绑定 — 音乐平台登录</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f5;color:#18181b;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:20px}
@@ -16,18 +15,6 @@ h1{text-align:center;font-size:22px;margin:16px 0 8px}
 .tab{flex:1;padding:10px;border:2px solid #e4e4e7;border-radius:10px;text-align:center;cursor:pointer;font-size:14px;font-weight:600;transition:all .2s;background:#fff}
 .tab.active{border-color:var(--c);color:var(--c);background:var(--bg)}
 .tab:hover:not(.active){border-color:#a1a1aa}
-#qr-area{text-align:center;padding:10px 0}
-#qr-box{display:inline-block;padding:16px;background:#fff;border:1px solid #e4e4e7;border-radius:12px;min-height:200px;display:flex;align-items:center;justify-content:center}
-#qr-box img,#qr-box canvas{display:block}
-#status{margin-top:12px;font-size:15px;font-weight:600;min-height:24px}
-#status.waiting{color:#71717a}
-#status.scanned{color:#2563eb}
-#status.ok{color:#15803d}
-#status.error{color:#b91c1c}
-#status.expired{color:#b91c1c}
-#status.unknown{color:#d97706}
-.spinner{display:inline-block;width:16px;height:16px;border:2px solid #e4e4e7;border-top-color:var(--c);border-radius:50%;animation:spin .8s linear infinite;margin-right:6px;vertical-align:middle}
-@keyframes spin{to{transform:rotate(360deg)}}
 .bind-code{font-size:42px;font-weight:900;letter-spacing:8px;color:#15803d;text-align:center;padding:16px;background:#f0fdf4;border:2px dashed #86efac;border-radius:12px;margin:12px 0}
 .btn{font:inherit;padding:12px 20px;border:none;border-radius:10px;cursor:pointer;font-size:15px;font-weight:600;width:100%;transition:all .2s}
 .btn-primary{background:#18181b;color:#fff}
@@ -48,272 +35,267 @@ h1{text-align:center;font-size:22px;margin:16px 0 8px}
 .step{background:#f4f4f5;padding:10px 12px;border-radius:8px;margin:6px 0;font-size:13px;line-height:1.6}
 .step b{color:#18181b}
 .mono{font-family:monospace;background:#e4e4e7;padding:2px 6px;border-radius:4px;font-size:12px}
+.notice{background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:#92400e;line-height:1.6}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid #e4e4e7;border-top-color:#16a34a;border-radius:50%;animation:spin .8s linear infinite;margin-right:6px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.row{display:flex;gap:8px}
+.row .cc{width:90px;flex-shrink:0}
+.row .phone{flex:1}
 </style>
 </head>
 <body>
 <div class="wrap">
 <h1>账号绑定</h1>
-<p class="sub">扫码登录音乐平台, 播放 VIP 歌曲</p>
+<p class="sub">登录音乐平台, 播放 VIP 歌曲</p>
 
-<!-- ========== 扫码登录 ========== -->
 <div class="card">
   <div class="tabs">
     <div class="tab active" data-platform="qq" style="--c:#d946ef;--bg:#fdf4ff">QQ音乐</div>
-    <div class="tab" data-platform="kugou" style="--c:#16a34a;--bg:#f0fdf4">酷狗</div>
-    <div class="tab" data-platform="kuwo" style="--c:#ea580c;--bg:#fff7ed">酷我</div>
+    <div class="tab" data-platform="netease" style="--c:#16a34a;--bg:#f0fdf4">网易云</div>
   </div>
 
-  <div id="qr-area">
-    <div id="qr-box"><p style="color:#a1a1aa;font-size:14px">点击下方按钮生成二维码</p></div>
-    <div id="status" class="waiting"></div>
-    <div id="bind-code-area" style="display:none">
-      <div class="bind-code" id="bind-code"></div>
-      <p class="hint" style="text-align:center">请回到游戏, 在聊天栏输入上方 6 位数字绑定码, 按回车</p>
+  <!-- QQ 音乐: Cookie 登录 -->
+  <div id="qq-area">
+    <div class="notice">
+      <b>为什么需要 Cookie?</b><br>
+      QQ 音乐的扫码登录接口封禁了我们的服务器 IP, 无法自动获取登录凭证。
+      请在浏览器登录 QQ 音乐后, 复制 Cookie 到下方输入框。Cookie 仅用于获取 VIP 歌曲播放地址, 不会存储到服务器。
     </div>
+
+    <div class="step"><b>步骤1:</b> 打开 <span class="mono">https://y.qq.com/</span> 并用 QQ/微信登录</div>
+    <div class="step"><b>步骤2:</b> 登录后, 按 <span class="mono">F12</span> 打开开发者工具</div>
+    <div class="step"><b>步骤3:</b> 切换到 <b>Console</b> (控制台) 标签</div>
+    <div class="step"><b>步骤4:</b> 输入 <span class="mono">copy(document.cookie)</span> 并回车, 自动复制 cookie</div>
+    <div class="step"><b>步骤5:</b> 粘贴到下方输入框</div>
+
+    <div class="field">
+      <label>Cookie <span style="color:#b91c1c">*</span> <span style="font-weight:400;color:#71717a">(需要包含 uin 和 qqmusic_key)</span></label>
+      <textarea id="qq-cookie-input" placeholder="uin=3295308018; qqmusic_key=Q_H_L_..." autocomplete="off" rows="3" style="width:100%;padding:10px 12px;border:1px solid #d4d4d8;border-radius:8px;font-size:12px;font-family:monospace;resize:vertical"></textarea>
+    </div>
+
+    <button class="btn btn-secondary" style="margin-bottom:8px" onclick="window.open('https://y.qq.com/', '_blank')">打开 QQ 音乐官网</button>
+    <button class="btn btn-primary" onclick="submitQqCookie()">提交绑定</button>
+    <div id="qq-result"></div>
   </div>
 
-  <button class="btn btn-primary" id="startBtn" onclick="startLogin()">生成二维码</button>
-  <p class="hint" id="qr-hint">用 <b>QQ APP</b> (不是QQ音乐APP) 扫码登录</p>
-</div>
-
-<!-- ========== 酷我手机验证码登录 (酷我无扫码) ========== -->
-<div class="card" id="kw-login-card" style="display:none">
-  <p class="hint" style="margin-bottom:12px;color:#b91c1c">酷我网页版暂不支持扫码登录, 请用手机验证码登录:</p>
-
-  <!-- 步骤1: 图片验证码 -->
-  <div id="kw-step1">
-    <div class="field">
-      <label>手机号 <span style="color:#b91c1c">*</span></label>
-      <input type="text" id="kw-mobile" placeholder="请输入手机号" autocomplete="off">
+  <!-- 网易云: 验证码登录 / Cookie 粘贴 (双方式) -->
+  <div id="netease-area" style="display:none">
+    <div class="tabs" style="margin-bottom:12px">
+      <div class="tab active nc-subtab" data-mode="phone" style="--c:#16a34a;--bg:#f0fdf4;font-size:13px;padding:8px">验证码登录</div>
+      <div class="tab nc-subtab" data-mode="cookie" style="--c:#16a34a;--bg:#f0fdf4;font-size:13px;padding:8px">Cookie 粘贴</div>
     </div>
-    <div class="field">
-      <label>图片验证码 <span style="color:#b91c1c">*</span></label>
-      <div style="display:flex;gap:8px;align-items:center">
-        <input type="text" id="kw-imgcode" placeholder="输入右侧验证码" autocomplete="off" style="flex:1">
-        <img id="kw-captcha-img" src="" alt="点击获取验证码" onclick="kwGetCaptcha()" style="height:40px;border:1px solid #d4d4d8;border-radius:8px;cursor:pointer;background:#f4f4f5">
+
+    <!-- 验证码登录 -->
+    <div id="nc-phone-area">
+      <div class="notice">
+        <b>手机号验证码登录</b><br>
+        输入手机号并获取验证码, 输入验证码后登录。登录后可播放 VIP 歌曲。验证码仅用于本次登录, 不会保存到服务器。
       </div>
-    </div>
-    <button class="btn btn-primary" style="margin-top:8px" onclick="kwSendSms()">发送短信验证码</button>
-  </div>
 
-  <!-- 步骤2: 短信验证码 -->
-  <div id="kw-step2" style="display:none">
-    <div class="field">
-      <label>短信验证码 <span style="color:#b91c1c">*</span></label>
-      <input type="text" id="kw-smscode" placeholder="请输入收到的短信验证码" autocomplete="off">
-    </div>
-    <button class="btn btn-primary" style="margin-top:8px" onclick="kwLogin()">登录酷我</button>
-  </div>
+      <div class="field">
+        <label>手机号 <span style="color:#b91c1c">*</span></label>
+        <div class="row">
+          <input class="cc" id="netease-cc" type="text" value="86" placeholder="86">
+          <input class="phone" id="netease-phone" type="tel" placeholder="13800138000" autocomplete="off">
+        </div>
+      </div>
 
-  <div id="kw-result"></div>
+      <div class="field">
+        <label>验证码 <span style="color:#b91c1c">*</span></label>
+        <div class="row">
+          <input id="netease-captcha" type="text" placeholder="6位验证码" autocomplete="off" maxlength="6" style="flex:1;min-width:0">
+          <button class="btn btn-secondary" id="nc-send-code-btn" onclick="sendNeteaseCode()" style="white-space:nowrap;width:auto;flex:0 0 auto">获取验证码</button>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="netease-submit" onclick="submitNeteaseLogin()">
+        <span id="netease-btn-text">验证并获取绑定码</span>
+      </button>
+    </div>
+
+    <!-- Cookie 粘贴登录 (兜底方案, 参考原版 ZMusic /zm login raw) -->
+    <div id="nc-cookie-area" style="display:none">
+      <div class="notice">
+        <b>Cookie 粘贴登录 (兜底方案)</b><br>
+        如果验证码登录失败 (机房 IP 可能被风控), 请用此方式。在自己电脑浏览器登录网易云后, 复制 Cookie 粘贴到下方。Cookie 仅用于获取 VIP 歌曲, 不会保存到服务器。
+      </div>
+
+      <div class="step"><b>步骤1:</b> 打开 <span class="mono">https://music.163.com/</span> 并登录</div>
+      <div class="step"><b>步骤2:</b> 登录后, 按 <span class="mono">F12</span> 打开开发者工具</div>
+      <div class="step"><b>步骤3:</b> 切换到 <b>Application</b> (应用) → <b>Cookies</b> → <span class="mono">music.163.com</span></div>
+      <div class="step"><b>步骤4:</b> 找到 <span class="mono">MUSIC_U</span> 行, 复制其值</div>
+      <div class="step"><b>步骤5:</b> 粘贴到下方输入框 (也可粘贴整段 Cookie 字符串)</div>
+
+      <div class="field">
+        <label>MUSIC_U 或完整 Cookie <span style="color:#b91c1c">*</span></label>
+        <textarea id="netease-cookie-input" placeholder="MUSIC_U=001A...  或  MUSIC_U=xxx; __csrf=yyy; os=pc" autocomplete="off" rows="3" style="width:100%;padding:10px 12px;border:1px solid #d4d4d8;border-radius:8px;font-size:12px;font-family:monospace;resize:vertical"></textarea>
+      </div>
+
+      <button class="btn btn-secondary" style="margin-bottom:8px" onclick="window.open('https://music.163.com/', '_blank')">打开网易云官网</button>
+      <button class="btn btn-primary" onclick="submitNeteaseCookie()">提交绑定</button>
+    </div>
+
+    <div id="netease-result"></div>
+  </div>
 </div>
-
-<!-- ========== 手动输入 (备用方式) ========== -->
-<details class="card faq" id="manual-card">
-  <summary>手动输入 Cookie (备用方式) — 扫码不成功时用这个</summary>
-  <div id="manual-area"></div>
-</details>
 
 <details class="card faq">
   <summary>常见问题</summary>
-  <p><b>QQ音乐扫码显示下载页?</b> 请用 <b>QQ APP</b> 扫码, 不是QQ音乐APP。</p>
-  <p><b>扫码后一直转圈?</b> 等待几秒, 如果超过30秒请重新生成二维码。</p>
-  <p><b>二维码过期了?</b> 重新点"生成二维码"即可。</p>
-  <p><b>绑定码过期了?</b> 5分钟内有效, 过期请重新扫码。</p>
-  <p><b>提示"已绑定"?</b> 在游戏内先解绑, 再重新扫码绑定。</p>
+  <p><b>QQ 音乐 Cookie 安全吗?</b> 仅用于获取 VIP 歌曲播放地址, 不会保存到服务器, 5 分钟后自动删除。</p>
+  <p><b>QQ 音乐 Cookie 包含哪些字段?</b> 主要需要 <span class="mono">uin</span> (QQ号) 和 <span class="mono">qqmusic_key</span> (登录凭证), 复制 document.cookie 即可。</p>
+  <p><b>网易云验证码安全吗?</b> 验证码仅用于本次登录请求, 服务端不保存, 登录成功后只保留返回的 Cookie 凭证。</p>
+  <p><b>网易云收不到验证码?</b> 可能是机房 IP 被风控, 请改用 "Cookie 粘贴" 方式: 浏览器登录 music.163.com → F12 → Application → Cookies → 复制 MUSIC_U 值。</p>
+  <p><b>为什么不用扫码登录?</b> 服务器在机房, 网易云会检测到"设备环境异常"并拦截扫码, 因此使用验证码或 Cookie 粘贴登录。</p>
+  <p><b>网易云验证码登录失败?</b> 可能是机房 IP 被风控, 请改用 "Cookie 粘贴" 方式: 浏览器登录 music.163.com → F12 → Application → Cookies → 复制 MUSIC_U 值。</p>
+  <p><b>网易云 Cookie 怎么获取?</b> 浏览器登录网易云后按 F12 → Application(应用) → Cookies → music.163.com → 找到 MUSIC_U 行复制其值, 或在 Network 标签任意请求的 Request Headers 里复制整段 Cookie。</p>
+  <p><b>绑定码过期了?</b> 5分钟内有效, 过期请重新登录。</p>
+  <p><b>提示"已绑定"?</b> 在游戏内先解绑, 再重新绑定。</p>
 </details>
 </div>
 
 <script>
 let currentPlatform = 'qq';
-let pollTimer = null;
-let loginToken = null;
-let pollCount = 0;
-
-const PLATFORMS = {
-  qq:    { name: 'QQ音乐', app: 'QQ APP (不是QQ音乐APP)', site: 'https://y.qq.com/' },
-  kugou: { name: '酷狗',   app: '酷狗音乐 APP',           site: 'https://www.kugou.com/' },
-  kuwo:  { name: '酷我',   app: '酷我音乐 APP',           site: 'https://www.kuwo.cn/' },
-};
-
-// 手动输入字段配置
-const MANUAL_FIELDS = {
-  qq: [
-    { key: 'userId', label: 'QQ号 (uin, 纯数字)', placeholder: '如: 2445387644', required: true },
-    { key: 'token', label: 'p_skey (从Cookie中找)', placeholder: '如: A1B2C3...', required: true },
-  ],
-  kugou: [
-    { key: 'userId', label: 'KugooID', placeholder: '从Cookie中找 KugooID', required: true },
-    { key: 'token', label: 'KugooToken', placeholder: '从Cookie中找 KugooToken', required: true },
-  ],
-  kuwo: [
-    { key: 'userId', label: 'kw_user_id', placeholder: '从Cookie中找 kw_user_id', required: true },
-    { key: 'token', label: 'kw_token', placeholder: '从Cookie中找 kw_token', required: true },
-  ],
-};
-
 const API_BASE = new URLSearchParams(location.search).get('api') || '';
 
-// 平台切换
 document.querySelectorAll('.tab').forEach(tab => {
+  if (tab.classList.contains('nc-subtab')) return; // 子标签单独处理
   tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => {
+      if (!t.classList.contains('nc-subtab')) t.classList.remove('active');
+    });
     tab.classList.add('active');
     currentPlatform = tab.dataset.platform;
-    stopPoll();
-    resetUI();
-    updateManualFields();
-    // 酷我无扫码, 显示手机验证码登录表单; 其他平台显示扫码
-    if (currentPlatform === 'kuwo') {
-      document.getElementById('qr-area').style.display = 'none';
-      document.getElementById('startBtn').style.display = 'none';
-      document.getElementById('qr-hint').style.display = 'none';
-      document.getElementById('kw-login-card').style.display = 'block';
-      // 自动获取图片验证码
-      if (!kwSessionId) kwGetCaptcha();
+    if (currentPlatform === 'qq') {
+      document.getElementById('qq-area').style.display = 'block';
+      document.getElementById('netease-area').style.display = 'none';
     } else {
-      document.getElementById('qr-area').style.display = 'block';
-      document.getElementById('startBtn').style.display = 'block';
-      document.getElementById('qr-hint').style.display = 'block';
-      document.getElementById('kw-login-card').style.display = 'none';
-      document.getElementById('qr-hint').innerHTML = '用 <b>' + PLATFORMS[currentPlatform].app + '</b> 扫码登录';
+      document.getElementById('qq-area').style.display = 'none';
+      document.getElementById('netease-area').style.display = 'block';
     }
   });
 });
 
-function resetUI() {
-  document.getElementById('qr-box').innerHTML = '<p style="color:#a1a1aa;font-size:14px">点击下方按钮生成二维码</p>';
-  document.getElementById('status').textContent = '';
-  document.getElementById('status').className = 'waiting';
-  document.getElementById('bind-code-area').style.display = 'none';
-  document.getElementById('startBtn').textContent = '生成二维码';
-  document.getElementById('startBtn').disabled = false;
-  document.getElementById('kw-result').innerHTML = '';
-  pollCount = 0;
-}
-
-// 更新手动输入字段
-function updateManualFields() {
-  const area = document.getElementById('manual-area');
-  const fields = MANUAL_FIELDS[currentPlatform];
-  const platName = PLATFORMS[currentPlatform].name;
-  const site = PLATFORMS[currentPlatform].site;
-
-  let html = '<p class="hint" style="margin-bottom:12px">如果扫码不成功, 可以手动从浏览器 Cookie 中复制需要的值填入下方:</p>';
-
-  // 步骤说明
-  html += '<div class="step"><b>步骤1:</b> 打开 <span class="mono">' + site + '</span> 并登录</div>';
-  html += '<div class="step"><b>步骤2:</b> 按 <span class="mono">F12</span> → 点击 <b>Application</b> (应用) 标签</div>';
-  html += '<div class="step"><b>步骤3:</b> 左侧 <b>Cookies</b> → 点击网站域名</div>';
-  html += '<div class="step"><b>步骤4:</b> 找到下方字段名, 复制对应的 Value 填入下方输入框</div>';
-
-  // 输入框
-  fields.forEach(f => {
-    html += '<div class="field">';
-    html += '<label>' + f.label + (f.required ? ' <span style="color:#b91c1c">*</span>' : '') + '</label>';
-    html += '<input type="text" id="manual-' + f.key + '" placeholder="' + f.placeholder + '" autocomplete="off">';
-    html += '</div>';
+// 网易云子标签切换 (手机号密码 / Cookie 粘贴)
+document.querySelectorAll('.nc-subtab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.nc-subtab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const mode = tab.dataset.mode;
+    document.getElementById('nc-phone-area').style.display = (mode === 'phone') ? 'block' : 'none';
+    document.getElementById('nc-cookie-area').style.display = (mode === 'cookie') ? 'block' : 'none';
   });
+});
 
-  html += '<button class="btn btn-primary" style="margin-top:12px" onclick="submitManual()">提交绑定</button>';
-  html += '<div id="manual-result"></div>';
-
-  area.innerHTML = html;
-}
-
-// 提交手动绑定
-async function submitManual() {
-  const fields = MANUAL_FIELDS[currentPlatform];
-  const params = new URLSearchParams();
-  params.set('platform', currentPlatform);
-
-  for (const f of fields) {
-    const val = document.getElementById('manual-' + f.key).value.trim();
-    if (f.required && !val) {
-      document.getElementById('manual-result').innerHTML = '<p style="color:#b91c1c;margin-top:8px">请填写: ' + f.label + '</p>';
-      return;
-    }
-    if (val) params.set(f.key, val);
+// ==================== QQ 音乐 Cookie 提交 ====================
+async function submitQqCookie() {
+  const cookie = document.getElementById('qq-cookie-input').value.trim();
+  const result = document.getElementById('qq-result');
+  if (!cookie) {
+    result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">请粘贴 Cookie</p>';
+    return;
   }
-
-  document.getElementById('manual-result').innerHTML = '<p style="color:#71717a;margin-top:8px">正在提交...</p>';
-
+  if (!cookie.includes('uin') || !(cookie.includes('qqmusic_key') || cookie.includes('qm_keyst'))) {
+    result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">Cookie 中需要包含 uin 和 qqmusic_key (或 qm_keyst), 请确认已登录 QQ 音乐</p>';
+    return;
+  }
+  result.innerHTML = '<p style="color:#71717a;margin-top:8px"><span class="spinner"></span>正在提交...</p>';
   try {
-    const resp = await fetch(`${API_BASE}/api?action=manual_bind&${params.toString()}`);
-    const text = await resp.text();
-    let data;
-    try { data = JSON.parse(text); } catch { data = { ok: false, message: '服务器异常, 请稍后重试' }; }
+    const base = API_BASE || window.location.origin;
+    const data = await safeFetch(`${base}/api?action=manual_bind&platform=qq&cookie=${encodeURIComponent(cookie)}`);
     if (data.ok) {
-      document.getElementById('manual-result').innerHTML = `
+      result.innerHTML = `
         <div style="margin-top:12px;padding:16px;background:#f0fdf4;border:2px dashed #86efac;border-radius:12px;text-align:center">
-          <p style="color:#15803d;font-weight:600;margin-bottom:8px">绑定成功!</p>
+          <p style="color:#15803d;font-weight:600;margin-bottom:8px">✓ 绑定成功 ${data.nickname || ''}</p>
           <div class="bind-code">${data.bindCode}</div>
           <p class="hint">请回到游戏, 输入上方 6 位绑定码</p>
         </div>`;
     } else {
-      document.getElementById('manual-result').innerHTML = '<p style="color:#b91c1c;margin-top:8px">' + (data.message || '提交失败') + '</p>';
-    }
-  } catch (err) {
-    document.getElementById('manual-result').innerHTML = '<p style="color:#b91c1c;margin-top:8px">网络错误: ' + err.message + '</p>';
-  }
-}
-
-// ==================== 酷我手机验证码登录 (三步流程) ====================
-let kwSessionId = null;
-
-// 步骤1: 获取图片验证码
-async function kwGetCaptcha() {
-  const img = document.getElementById('kw-captcha-img');
-  img.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="40"><text x="50" y="22" text-anchor="middle" fill="#a1a1aa">加载中...</text></svg>';
-  try {
-    const data = await safeFetch(`${API_BASE}/api?action=kw_captcha`);
-    if (data.ok) {
-      kwSessionId = data.sessionId;
-      img.src = data.img;
-      document.getElementById('kw-result').innerHTML = '';
-    } else {
-      document.getElementById('kw-result').innerHTML = '<p style="color:#b91c1c;margin-top:8px">' + (data.message || '获取验证码失败') + '</p>';
-    }
-  } catch (err) {
-    document.getElementById('kw-result').innerHTML = '<p style="color:#b91c1c;margin-top:8px">网络错误: ' + err.message + '</p>';
-  }
-}
-
-// 步骤2: 发送短信验证码
-async function kwSendSms() {
-  const mobile = document.getElementById('kw-mobile').value.trim();
-  const imgcode = document.getElementById('kw-imgcode').value.trim();
-  const result = document.getElementById('kw-result');
-  if (!mobile) { result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">请输入手机号</p>'; return; }
-  if (!imgcode) { result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">请输入图片验证码</p>'; return; }
-  if (!kwSessionId) { result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">请先获取图片验证码</p>'; return; }
-
-  result.innerHTML = '<p style="color:#71717a;margin-top:8px">正在发送...</p>';
-  try {
-    const data = await safeFetch(`${API_BASE}/api?action=kw_send_sms&sessionId=${kwSessionId}&mobile=${encodeURIComponent(mobile)}&verifyCode=${encodeURIComponent(imgcode)}`);
-    if (data.ok) {
-      result.innerHTML = '<p style="color:#15803d;margin-top:8px">✓ 短信验证码已发送, 请查收</p>';
-      document.getElementById('kw-step1').style.display = 'none';
-      document.getElementById('kw-step2').style.display = 'block';
-    } else {
-      result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">' + (data.message || '发送失败') + '</p>';
-      // 验证码错误时刷新图片
-      kwGetCaptcha();
+      result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">' + (data.message || '提交失败') + '</p>';
     }
   } catch (err) {
     result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">网络错误: ' + err.message + '</p>';
   }
 }
 
-// 步骤3: 短信验证码登录
-async function kwLogin() {
-  const smscode = document.getElementById('kw-smscode').value.trim();
-  const result = document.getElementById('kw-result');
-  if (!smscode) { result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">请输入短信验证码</p>'; return; }
+// ==================== 网易云验证码登录 ====================
+let ncCodeTimer = null;
+async function sendNeteaseCode() {
+  const cc = document.getElementById('netease-cc').value.trim() || '86';
+  const phone = document.getElementById('netease-phone').value.trim();
+  const result = document.getElementById('netease-result');
+  const btn = document.getElementById('nc-send-code-btn');
 
-  result.innerHTML = '<p style="color:#71717a;margin-top:8px">正在登录...</p>';
+  if (!phone) {
+    result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">请输入手机号</p>';
+    return;
+  }
+  if (!/^\d{6,15}$/.test(phone)) {
+    result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">手机号格式不正确</p>';
+    return;
+  }
+
+  btn.disabled = true;
+  result.innerHTML = '<p style="color:#71717a;margin-top:8px"><span class="spinner"></span>正在发送验证码...</p>';
   try {
-    const data = await safeFetch(`${API_BASE}/api?action=kw_login&sessionId=${kwSessionId}&smsCode=${encodeURIComponent(smscode)}`);
+    const base = API_BASE || window.location.origin;
+    const resp = await fetch(`${base}/api?action=nc_sendcode&phone=${encodeURIComponent(phone)}&countrycode=${encodeURIComponent(cc)}`);
+    const data = await safeFetchResp(resp);
+    if (data.ok) {
+      result.innerHTML = '<p style="color:#15803d;margin-top:8px">✓ 验证码已发送, 请查看手机短信</p>';
+      // 60 秒倒计时
+      let left = 60;
+      btn.textContent = `${left}s 后重发`;
+      ncCodeTimer = setInterval(() => {
+        left--;
+        if (left <= 0) {
+          clearInterval(ncCodeTimer);
+          btn.textContent = '获取验证码';
+          btn.disabled = false;
+        } else {
+          btn.textContent = `${left}s 后重发`;
+        }
+      }, 1000);
+    } else {
+      result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">' + (data.message || '发送失败') + '</p>';
+      btn.textContent = '获取验证码';
+      btn.disabled = false;
+    }
+  } catch (err) {
+    result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">网络错误: ' + err.message + '</p>';
+    btn.textContent = '获取验证码';
+    btn.disabled = false;
+  }
+}
+
+async function submitNeteaseLogin() {
+  const cc = document.getElementById('netease-cc').value.trim() || '86';
+  const phone = document.getElementById('netease-phone').value.trim();
+  const captcha = document.getElementById('netease-captcha').value.trim();
+  const result = document.getElementById('netease-result');
+  const btn = document.getElementById('netease-submit');
+  const btnText = document.getElementById('netease-btn-text');
+
+  if (!phone) {
+    result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">请输入手机号</p>';
+    return;
+  }
+  if (!captcha) {
+    result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">请输入验证码</p>';
+    return;
+  }
+  if (!/^\d{6,15}$/.test(phone)) {
+    result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">手机号格式不正确</p>';
+    return;
+  }
+
+  btn.disabled = true;
+  btnText.innerHTML = '<span class="spinner"></span>正在验证...';
+  result.innerHTML = '';
+
+  try {
+    const base = API_BASE || window.location.origin;
+    const resp = await fetch(`${base}/api?action=nc_verify&phone=${encodeURIComponent(phone)}&captcha=${encodeURIComponent(captcha)}&countrycode=${encodeURIComponent(cc)}`);
+    const data = await safeFetchResp(resp);
     if (data.ok) {
       result.innerHTML = `
         <div style="margin-top:12px;padding:16px;background:#f0fdf4;border:2px dashed #86efac;border-radius:12px;text-align:center">
@@ -321,157 +303,73 @@ async function kwLogin() {
           <div class="bind-code">${data.bindCode}</div>
           <p class="hint">请回到游戏, 输入上方 6 位绑定码</p>
         </div>`;
+      btnText.textContent = '登录成功';
+      btn.disabled = true;
     } else {
-      result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">' + (data.message || '登录失败') + '</p>';
+      result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">' + (data.message || '验证失败') + '</p>';
+      btnText.textContent = '验证并获取绑定码';
+      btn.disabled = false;
+    }
+  } catch (err) {
+    result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">网络错误: ' + err.message + '</p>';
+    btnText.textContent = '验证并获取绑定码';
+    btn.disabled = false;
+  }
+}
+
+// ==================== 网易云 Cookie 粘贴 (兜底方案, 参考原版 ZMusic /zm login raw) ====================
+async function submitNeteaseCookie() {
+  let raw = document.getElementById('netease-cookie-input').value.trim();
+  const result = document.getElementById('netease-result');
+  if (!raw) {
+    result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">请粘贴 MUSIC_U 或完整 Cookie</p>';
+    return;
+  }
+  // 如果只粘贴了 MUSIC_U 的值 (不含 = 号), 自动包装
+  if (!raw.includes('=') && /^[A-Za-z0-9_\-]+$/.test(raw)) {
+    raw = 'MUSIC_U=' + raw;
+  }
+  if (!raw.includes('MUSIC_U')) {
+    result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">Cookie 中需要包含 MUSIC_U 字段, 请确认已登录网易云</p>';
+    return;
+  }
+  result.innerHTML = '<p style="color:#71717a;margin-top:8px"><span class="spinner"></span>正在提交...</p>';
+  try {
+    const base = API_BASE || window.location.origin;
+    const data = await safeFetch(`${base}/api?action=manual_bind&platform=netease&cookie=${encodeURIComponent(raw)}`);
+    if (data.ok) {
+      result.innerHTML = `
+        <div style="margin-top:12px;padding:16px;background:#f0fdf4;border:2px dashed #86efac;border-radius:12px;text-align:center">
+          <p style="color:#15803d;font-weight:600;margin-bottom:8px">✓ 绑定成功 ${data.nickname || ''}</p>
+          <div class="bind-code">${data.bindCode}</div>
+          <p class="hint">请回到游戏, 输入上方 6 位绑定码</p>
+        </div>`;
+    } else {
+      result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">' + (data.message || '提交失败') + '</p>';
     }
   } catch (err) {
     result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">网络错误: ' + err.message + '</p>';
   }
 }
 
-// 安全 fetch: 处理非 JSON 响应 (Vercel 超时返回 HTML)
+// 安全 fetch (GET)
 async function safeFetch(url) {
   const resp = await fetch(url);
+  return safeFetchResp(resp);
+}
+
+// 安全 fetch 响应解析
+async function safeFetchResp(resp) {
   const text = await resp.text();
   try {
     return JSON.parse(text);
   } catch (e) {
-    // Vercel 超时或服务端返回 HTML 错误页
     if (text.startsWith('<') || text.startsWith('<!DOCTYPE')) {
-      return { ok: false, message: '服务器繁忙或超时, 请重试或用手动输入方式' };
+      return { ok: false, message: '服务器繁忙或超时, 请重试' };
     }
     return { ok: false, message: '服务器返回异常: ' + text.slice(0, 100) };
   }
 }
-
-// 开始扫码登录
-async function startLogin() {
-  const btn = document.getElementById('startBtn');
-  const status = document.getElementById('status');
-  const qrBox = document.getElementById('qr-box');
-
-  btn.disabled = true;
-  btn.textContent = '正在获取二维码...';
-  status.className = 'waiting';
-  status.innerHTML = '<span class="spinner"></span>正在获取二维码...';
-  document.getElementById('bind-code-area').style.display = 'none';
-  pollCount = 0;
-
-  try {
-    const data = await safeFetch(`${API_BASE}/api?action=qr_create&server=${currentPlatform}`);
-
-    if (!data.ok) {
-      status.className = 'error';
-      status.textContent = data.message || '获取二维码失败';
-      btn.disabled = false;
-      btn.textContent = '重新生成二维码';
-      // 自动展开手动输入
-      document.getElementById('manual-card').open = true;
-      return;
-    }
-
-    loginToken = data.token;
-    qrBox.innerHTML = '';
-
-    if (data.qrContent) {
-      new QRCode(qrBox, {
-        text: data.qrContent,
-        width: 200,
-        height: 200,
-        colorDark: '#000000',
-        colorLight: '#ffffff',
-      });
-    } else if (data.qrUrl) {
-      qrBox.innerHTML = `<img src="${data.qrUrl}" width="200" height="200" alt="二维码">`;
-    } else {
-      status.className = 'error';
-      status.textContent = '未获取到二维码';
-      btn.disabled = false;
-      btn.textContent = '重新生成二维码';
-      return;
-    }
-
-    status.className = 'waiting';
-    status.innerHTML = '<span class="spinner"></span>请用 ' + PLATFORMS[currentPlatform].app + ' 扫码';
-    btn.textContent = '重新生成二维码';
-    btn.disabled = false;
-
-    startPoll();
-  } catch (err) {
-    status.className = 'error';
-    status.textContent = '网络错误: ' + err.message;
-    btn.disabled = false;
-    btn.textContent = '重新生成二维码';
-  }
-}
-
-function startPoll() {
-  stopPoll();
-  pollTimer = setInterval(pollStatus, 2000);
-}
-
-function stopPoll() {
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-}
-
-async function pollStatus() {
-  if (!loginToken) return;
-  const status = document.getElementById('status');
-  pollCount++;
-
-  // 超过 60 次 (2分钟) 自动停止
-  if (pollCount > 60) {
-    stopPoll();
-    status.className = 'expired';
-    status.textContent = '等待超时, 请重新生成二维码';
-    document.getElementById('startBtn').textContent = '重新生成二维码';
-    document.getElementById('startBtn').disabled = false;
-    return;
-  }
-
-  try {
-    const data = await safeFetch(`${API_BASE}/api?action=qr_check&server=${currentPlatform}&token=${loginToken}`);
-
-    if (data.status === 'waiting') {
-      status.className = 'waiting';
-      status.innerHTML = '<span class="spinner"></span>请用 ' + PLATFORMS[currentPlatform].app + ' 扫码';
-    } else if (data.status === 'scanned') {
-      status.className = 'scanned';
-      status.innerHTML = '✓ 已扫码, 请在手机上点击确认登录';
-    } else if (data.status === 'ok') {
-      stopPoll();
-      status.className = 'ok';
-      status.innerHTML = '<span class="ok-badge">✓ 登录成功</span> ' + (data.nickname || '');
-      if (data.bindCode) {
-        document.getElementById('bind-code').textContent = data.bindCode;
-        document.getElementById('bind-code-area').style.display = 'block';
-        document.getElementById('startBtn').textContent = '登录成功';
-        document.getElementById('startBtn').disabled = true;
-      }
-    } else if (data.status === 'expired') {
-      stopPoll();
-      status.className = 'expired';
-      status.textContent = data.message || '二维码已过期, 请重新生成';
-      document.getElementById('startBtn').textContent = '重新生成二维码';
-      document.getElementById('startBtn').disabled = false;
-    } else if (data.status === 'error') {
-      stopPoll();
-      status.className = 'error';
-      status.textContent = data.message || '登录失败';
-      document.getElementById('startBtn').textContent = '重新生成二维码';
-      document.getElementById('startBtn').disabled = false;
-    } else if (data.status === 'unknown') {
-      // QQ扫码返回unknown时, 显示具体原因但不停止轮询
-      status.className = 'unknown';
-      status.innerHTML = '<span class="spinner"></span>' + (data.message || '正在等待登录结果...');
-    }
-  } catch (err) {
-    // 网络错误不停止轮询
-  }
-}
-
-// 初始化
-updateManualFields();
 </script>
 </body>
 </html>

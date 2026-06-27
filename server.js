@@ -34,7 +34,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Ourcraft Music API v0.16.0: http://127.0.0.1:${PORT}/test`);
+  console.log(`Ourcraft Music API: http://127.0.0.1:${PORT}/`);
   console.log(`Admin:  http://127.0.0.1:${PORT}/admin`);
   console.log(`Health: http://127.0.0.1:${PORT}/api?action=health`);
   console.log(`Mode:   api-enhanced 已融合 (无需启动外部服务)`);
