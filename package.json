@@ -1,13 +1,13 @@
 {
   "name": "ourcraft-music-api",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "private": true,
-  "description": "Ourcraft Music API — multi-platform (netease/kugou/kuwo/qq/bilibili) with QQ VIP cross-platform unblock + playlist search",
+  "description": "Ourcraft Music API — multi-platform (netease/kugou/kuwo/qq) with QQ VIP cross-platform unblock + playlist search",
   "type": "commonjs",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check api/index.js && node --check lib/provider.js && node --check lib/netease-client.js && node --check lib/meting.js && node --check lib/allowlist.js && node --check lib/app.js && node --check lib/providers/index.js && node --check lib/providers/netease.js && node --check lib/providers/kugou.js && node --check lib/providers/kuwo.js && node --check lib/providers/qq.js && node --check lib/providers/bilibili.js"
+    "check": "node --check server.js && node --check api/index.js && node --check lib/provider.js && node --check lib/netease-client.js && node --check lib/meting.js && node --check lib/allowlist.js && node --check lib/app.js && node --check lib/providers/index.js && node --check lib/providers/netease.js && node --check lib/providers/kugou.js && node --check lib/providers/kuwo.js && node --check lib/providers/qq.js"
   },
   "engines": {
     "node": ">=18"
