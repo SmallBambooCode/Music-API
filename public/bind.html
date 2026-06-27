@@ -3,115 +3,262 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>账号绑定教程</title>
+<title>账号绑定 — 扫码登录</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <style>
-body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:680px;margin:40px auto;padding:0 18px;line-height:1.65;background:#fafafa;color:#18181b}
-.card{background:#fff;border:1px solid #e4e4e7;border-radius:16px;padding:18px;margin:16px 0}
-.btn{font:inherit;padding:10px 18px;border:1px solid #18181b;border-radius:8px;background:#18181b;color:#fff;cursor:pointer;font-size:15px;width:100%}
-.btn:hover{background:#27272a}
-.code-box{background:#f4f4f5;padding:14px;border-radius:10px;font-family:monospace;font-size:13px;word-break:break-all;user-select:all;margin:12px 0}
-.step{display:flex;gap:12px;margin:12px 0}
-.step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold}
-.step-text{flex:1;padding-top:3px}
-.ok{color:#15803d;font-weight:bold}
-.err{color:#b91c1c}
-.link{color:#2563eb;text-decoration:underline;cursor:pointer}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f5;color:#18181b;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:20px}
+.wrap{max-width:480px;width:100%}
+h1{text-align:center;font-size:22px;margin:16px 0 8px}
+.sub{text-align:center;color:#71717a;font-size:14px;margin-bottom:20px}
+.card{background:#fff;border:1px solid #e4e4e7;border-radius:16px;padding:20px;margin:12px 0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.tabs{display:flex;gap:8px;margin-bottom:16px}
+.tab{flex:1;padding:10px;border:2px solid #e4e4e7;border-radius:10px;text-align:center;cursor:pointer;font-size:14px;font-weight:600;transition:all .2s;background:#fff}
+.tab.active{border-color:var(--c);color:var(--c);background:var(--bg)}
+.tab:hover:not(.active){border-color:#a1a1aa}
+#qr-area{text-align:center;padding:10px 0}
+#qr-box{display:inline-block;padding:16px;background:#fff;border:1px solid #e4e4e7;border-radius:12px;min-height:200px;display:flex;align-items:center;justify-content:center}
+#qr-box img,#qr-box canvas{display:block}
+#status{margin-top:12px;font-size:15px;font-weight:600;min-height:24px}
+#status.waiting{color:#71717a}
+#status.scanned{color:#2563eb}
+#status.ok{color:#15803d}
+#status.error{color:#b91c1c}
+#status.expired{color:#b91c1c}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid #e4e4e7;border-top-color:var(--c);border-radius:50%;animation:spin .8s linear infinite;margin-right:6px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.bind-code{font-size:42px;font-weight:900;letter-spacing:8px;color:#15803d;text-align:center;padding:16px;background:#f0fdf4;border:2px dashed #86efac;border-radius:12px;margin:12px 0}
+.btn{font:inherit;padding:12px 20px;border:none;border-radius:10px;cursor:pointer;font-size:15px;font-weight:600;width:100%;transition:all .2s}
+.btn-primary{background:#18181b;color:#fff}
+.btn-primary:hover{background:#27272a}
+.btn-primary:disabled{background:#a1a1aa;cursor:not-allowed}
+.hint{font-size:13px;color:#71717a;margin-top:8px;line-height:1.6}
+.faq{font-size:13px;color:#71717a;margin-top:12px}
+.faq summary{cursor:pointer;font-weight:600;color:#52525b}
+.faq[open] summary{margin-bottom:8px}
+.faq p{margin:4px 0;line-height:1.6}
+.code-box{background:#f4f4f5;padding:12px;border-radius:8px;font-family:monospace;font-size:12px;word-break:break-all;user-select:all;margin:8px 0}
+.ok-badge{display:inline-block;background:#15803d;color:#fff;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:bold}
 </style>
 </head>
 <body>
-<h1 id="title">账号绑定教程</h1>
-<div class="card" id="content">
-  <p style="text-align:center;color:#71717a">加载中...</p>
+<div class="wrap">
+<h1>账号绑定</h1>
+<p class="sub">扫码登录音乐平台, 播放 VIP 歌曲</p>
+
+<div class="card">
+  <div class="tabs">
+    <div class="tab active" data-platform="qq" style="--c:#d946ef;--bg:#fdf4ff">QQ音乐</div>
+    <div class="tab" data-platform="kugou" style="--c:#16a34a;--bg:#f0fdf4">酷狗</div>
+    <div class="tab" data-platform="kuwo" style="--c:#ea580c;--bg:#fff7ed">酷我</div>
+  </div>
+
+  <div id="qr-area">
+    <div id="qr-box"><p style="color:#a1a1aa;font-size:14px">点击下方按钮生成二维码</p></div>
+    <div id="status" class="waiting"></div>
+    <div id="bind-code-area" style="display:none">
+      <div class="bind-code" id="bind-code"></div>
+      <p class="hint" style="text-align:center">请回到游戏, 在聊天栏输入上方 6 位数字绑定码, 按回车</p>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" id="startBtn" onclick="startLogin()">生成二维码</button>
+  <p class="hint">用对应平台的手机 APP 扫码登录 (如 QQ 音乐 → QQ 音乐 APP 扫码)</p>
+</div>
+
+<details class="card faq">
+  <summary>扫不了码? 试试 F12 手动复制 (备用)</summary>
+  <p>如果扫码登录不成功, 可以用传统方式:</p>
+  <p>1. 登录对应平台网页版</p>
+  <p>2. 按 F12 → Console (控制台)</p>
+  <p>3. 粘贴下方代码, 回车, 复制结果到游戏聊天栏</p>
+  <div class="code-box" id="fallback-code"></div>
+  <button class="btn btn-primary" style="margin-top:8px" onclick="copyFallback()">复制代码</button>
+</details>
+
+<details class="card faq">
+  <summary>常见问题</summary>
+  <p><b>二维码过期了怎么办?</b> 重新点"生成二维码"即可。</p>
+  <p><b>扫码后没反应?</b> 请确保手机 APP 已登录, 扫码后点"确认登录"。</p>
+  <p><b>绑定码过期了?</b> 5 分钟内有效, 过期请重新扫码。</p>
+  <p><b>提示"已绑定"?</b> 在游戏内先解绑, 再重新扫码绑定。</p>
+</details>
 </div>
 
 <script>
-// v2.4.1: 浏览器端提取关键字段, 生成短字符串 (避免 Minecraft 聊天栏 256 字符限制截断)
-// 每个平台的 jsCode 在目标网站的控制台执行, 只提取登录所需字段
+let currentPlatform = 'qq';
+let pollTimer = null;
+let loginToken = null;
+
+// 平台配置
 const PLATFORMS = {
-  qq: {
-    name: 'QQ音乐',
-    site: 'https://y.qq.com/',
-    color: '#d946ef',
-    // QQ 只需 uin 和 qqmusic_key, 格式: uin|qqmusic_key (约100字符, 远小于256限制)
-    js: "javascript:(function(){var c=document.cookie;var u=(c.match(/\\buin=o?(\\d+)/)||[])[1]||'';var k=(c.match(/qqmusic_key=([^;\\s]+)/)||[])[1]||'';if(u&&k){copy(u+'|'+k);console.log('已复制 QQ 登录信息:\\nuin='+u+'\\nqqmusic_key='+k.slice(0,20)+'...')}else{console.log('未找到 uin 或 qqmusic_key, 请确认已在 y.qq.com 登录')}})()"
-  },
-  kugou: {
-    name: '酷狗',
-    site: 'https://www.kugou.com/',
-    color: '#16a34a',
-    // 酷狗提取 KugooID/KugooToken 或 userid/token, 格式: KugooID=xxx; KugooToken=yyy
-    js: "javascript:(function(){var c=document.cookie;var p=[];var uid=c.match(/(?:^|;\\s*)KugooID=([^;]+)/i)||c.match(/(?:^|;\\s*)userid=([^;]+)/i);var tk=c.match(/(?:^|;\\s*)KugooToken=([^;]+)/i)||c.match(/(?:^|;\\s*)token=([^;]+)/i);if(uid)p.push(uid[0].trim());if(tk)p.push(tk[0].trim());if(p.length){copy(p.join('; '));console.log('已复制酷狗登录信息:\\n'+p.join('; '))}else{console.log('未找到酷狗登录字段, 请确认已登录')}})()"
-  },
-  kuwo: {
-    name: '酷我',
-    site: 'https://www.kuwo.cn/',
-    color: '#ea580c',
-    // 酷我提取 kw_user_id/kw_token, 格式: kw_user_id=xxx; kw_token=yyy
-    js: "javascript:(function(){var c=document.cookie;var p=[];var uid=c.match(/(?:^|;\\s*)kw_user_id=([^;]+)/i)||c.match(/(?:^|;\\s*)userid=([^;]+)/i);var tk=c.match(/(?:^|;\\s*)kw_token=([^;]+)/i);if(uid)p.push(uid[0].trim());if(tk)p.push(tk[0].trim());if(p.length){copy(p.join('; '));console.log('已复制酷我登录信息:\\n'+p.join('; '))}else{console.log('未找到酷我登录字段, 请确认已登录')}})()"
-  }
+  qq:    { name: 'QQ音乐', site: 'https://y.qq.com/' },
+  kugou: { name: '酷狗',   site: 'https://www.kugou.com/' },
+  kuwo:  { name: '酷我',   site: 'https://www.kuwo.cn/' },
 };
 
-const params = new URLSearchParams(location.search);
-const platform = params.get('platform') || 'kugou';
-const meta = PLATFORMS[platform] || PLATFORMS.kugou;
+// F12 备用代码
+const FALLBACK_JS = {
+  qq: "javascript:(function(){var c=document.cookie;var u=(c.match(/\\buin=o?(\\d+)/)||[])[1]||'';var k=(c.match(/qqmusic_key=([^;\\s]+)/)||[])[1]||'';if(u&&k){copy(u+'|'+k);console.log('已复制')}else{console.log('未找到, 请确认已登录')}})()",
+  kugou: "javascript:(function(){var c=document.cookie;var p=[];var uid=c.match(/(?:^|;\\s*)KugooID=([^;]+)/i)||c.match(/(?:^|;\\s*)userid=([^;]+)/i);var tk=c.match(/(?:^|;\\s*)KugooToken=([^;]+)/i)||c.match(/(?:^|;\\s*)token=([^;]+)/i);if(uid)p.push(uid[0].trim());if(tk)p.push(tk[0].trim());if(p.length){copy(p.join('; '));console.log('已复制')}else{console.log('未找到, 请确认已登录')}})()",
+  kuwo: "javascript:(function(){var c=document.cookie;var p=[];var uid=c.match(/(?:^|;\\s*)kw_user_id=([^;]+)/i)||c.match(/(?:^|;\\s*)userid=([^;]+)/i);var tk=c.match(/(?:^|;\\s*)kw_token=([^;]+)/i);if(uid)p.push(uid[0].trim());if(tk)p.push(tk[0].trim());if(p.length){copy(p.join('; '));console.log('已复制')}else{console.log('未找到, 请确认已登录')}})()",
+};
 
-document.title = meta.name + ' 账号绑定教程';
-document.getElementById('title').textContent = meta.name + ' 账号绑定教程';
+// API 地址 (从 URL 参数获取, 默认相对路径)
+const API_BASE = new URLSearchParams(location.search).get('api') || '';
 
-document.getElementById('content').innerHTML = `
-  <div class="step">
-    <div class="step-num">1</div>
-    <div class="step-text">先登录 <span class="link" onclick="window.open('${meta.site}','_blank')">${meta.site}</span></div>
-  </div>
-  <div class="step">
-    <div class="step-num">2</div>
-    <div class="step-text">在登录后的页面按 <b>F12</b>，点击 <b>Console</b> (控制台) 标签</div>
-  </div>
-  <div class="step">
-    <div class="step-num">3</div>
-    <div class="step-text">点击下面按钮复制代码，粘贴到控制台，按回车</div>
-  </div>
-  <div class="code-box" id="code">${escapeHtml(meta.js)}</div>
-  <button class="btn" id="copyBtn" onclick="copyCode()">📋 一键复制代码</button>
-  <div id="result" style="margin-top:12px"></div>
-  <div class="card" style="background:#fff7ed;border-color:#fed7aa;margin-top:16px">
-    <p style="margin:0;font-size:14px;color:#9a3412"><b>⚠️ 遇到 "禁止粘贴" / "Allow pasting" 提醒？</b></p>
-    <p style="margin:8px 0 0;font-size:13px;color:#9a3412">浏览器会阻止在控制台粘贴代码 (防止钓鱼)。如果粘贴时弹出警告：</p>
-    <p style="margin:8px 0 0;font-size:13px;color:#9a3412">① 不要关闭警告，直接在控制台输入 <code style="background:#fee2e2;padding:2px 6px;border-radius:4px;font-weight:bold">允许粘贴</code> 后回车</p>
-    <p style="margin:6px 0 0;font-size:13px;color:#9a3412">② Chrome 用户输入 <code style="background:#fee2e2;padding:2px 6px;border-radius:4px;font-weight:bold">allow pasting</code> 后回车</p>
-    <p style="margin:6px 0 0;font-size:13px;color:#9a3412">③ 然后再次粘贴我们的代码，按回车即可</p>
-  </div>
-  <hr style="margin:20px 0;border:none;border-top:1px solid #e4e4e7">
-  <p style="font-size:14px;color:#71717a">控制台显示 <b style="color:#15803d">已复制</b> 后，回到游戏按 <b>Ctrl+V</b> 粘贴到聊天栏，回车即可完成绑定。</p>
-  <p style="font-size:13px;color:#71717a">说明: 代码会自动提取登录关键字段 (非完整 cookie)，字符串很短，可以直接粘贴到游戏聊天栏。</p>
-`;
+// 平台切换
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentPlatform = tab.dataset.platform;
+    stopPoll();
+    resetUI();
+    document.getElementById('fallback-code').textContent = FALLBACK_JS[currentPlatform];
+  });
+});
 
-function escapeHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+// 初始化备用代码
+document.getElementById('fallback-code').textContent = FALLBACK_JS.qq;
+
+function resetUI() {
+  document.getElementById('qr-box').innerHTML = '<p style="color:#a1a1aa;font-size:14px">点击下方按钮生成二维码</p>';
+  document.getElementById('status').textContent = '';
+  document.getElementById('status').className = 'waiting';
+  document.getElementById('bind-code-area').style.display = 'none';
+  document.getElementById('startBtn').textContent = '生成二维码';
+  document.getElementById('startBtn').disabled = false;
 }
 
-async function copyCode() {
-  const btn = document.getElementById('copyBtn');
-  const result = document.getElementById('result');
+// 开始扫码登录
+async function startLogin() {
+  const btn = document.getElementById('startBtn');
+  const status = document.getElementById('status');
+  const qrBox = document.getElementById('qr-box');
+
+  btn.disabled = true;
+  btn.textContent = '正在获取二维码...';
+  status.className = 'waiting';
+  status.innerHTML = '<span class="spinner"></span>正在获取二维码...';
+  document.getElementById('bind-code-area').style.display = 'none';
+
   try {
-    await navigator.clipboard.writeText(meta.js);
-    btn.textContent = '✅ 已复制！';
-    btn.style.background = '#15803d';
-    result.innerHTML = '<p class="ok">代码已复制到剪贴板！现在去浏览器控制台粘贴并回车。</p>';
-  } catch(e) {
-    const codeEl = document.getElementById('code');
+    const resp = await fetch(`${API_BASE}/api?action=qr_create&server=${currentPlatform}`);
+    const data = await resp.json();
+
+    if (!data.ok) {
+      status.className = 'error';
+      status.textContent = data.message || '获取二维码失败';
+      btn.disabled = false;
+      btn.textContent = '重新生成二维码';
+      return;
+    }
+
+    loginToken = data.token;
+    qrBox.innerHTML = '';
+
+    // 如果有 qrContent (酷狗/酷我), 用 qrcode.js 生成二维码
+    if (data.qrContent) {
+      new QRCode(qrBox, {
+        text: data.qrContent,
+        width: 200,
+        height: 200,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+      });
+    } else if (data.qrUrl) {
+      // QQ 返回的是图片 URL
+      qrBox.innerHTML = `<img src="${data.qrUrl}" width="200" height="200" alt="二维码">`;
+    } else {
+      status.className = 'error';
+      status.textContent = '未获取到二维码';
+      btn.disabled = false;
+      btn.textContent = '重新生成二维码';
+      return;
+    }
+
+    status.className = 'waiting';
+    status.innerHTML = '<span class="spinner"></span>请用' + PLATFORMS[currentPlatform].name + ' APP 扫码';
+    btn.textContent = '重新生成二维码';
+    btn.disabled = false;
+
+    // 开始轮询
+    startPoll();
+  } catch (err) {
+    status.className = 'error';
+    status.textContent = '网络错误: ' + err.message;
+    btn.disabled = false;
+    btn.textContent = '重新生成二维码';
+  }
+}
+
+function startPoll() {
+  stopPoll();
+  pollTimer = setInterval(pollStatus, 2000);
+}
+
+function stopPoll() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+
+async function pollStatus() {
+  if (!loginToken) return;
+  const status = document.getElementById('status');
+
+  try {
+    const resp = await fetch(`${API_BASE}/api?action=qr_check&server=${currentPlatform}&token=${loginToken}`);
+    const data = await resp.json();
+
+    if (data.status === 'waiting') {
+      status.className = 'waiting';
+      status.innerHTML = '<span class="spinner"></span>请用' + PLATFORMS[currentPlatform].name + ' APP 扫码';
+    } else if (data.status === 'scanned') {
+      status.className = 'scanned';
+      status.innerHTML = '✓ 已扫码, 请在手机上点击确认登录';
+    } else if (data.status === 'ok') {
+      stopPoll();
+      status.className = 'ok';
+      status.innerHTML = '<span class="ok-badge">✓ 登录成功</span> ' + (data.nickname || '');
+      // 显示绑定码
+      if (data.bindCode) {
+        document.getElementById('bind-code').textContent = data.bindCode;
+        document.getElementById('bind-code-area').style.display = 'block';
+        document.getElementById('startBtn').textContent = '登录成功';
+        document.getElementById('startBtn').disabled = true;
+      }
+    } else if (data.status === 'expired') {
+      stopPoll();
+      status.className = 'expired';
+      status.textContent = '二维码已过期, 请重新生成';
+      document.getElementById('startBtn').textContent = '重新生成二维码';
+      document.getElementById('startBtn').disabled = false;
+    } else if (data.status === 'error') {
+      stopPoll();
+      status.className = 'error';
+      status.textContent = data.message || '登录失败';
+      document.getElementById('startBtn').textContent = '重新生成二维码';
+      document.getElementById('startBtn').disabled = false;
+    }
+  } catch (err) {
+    // 网络错误不停止轮询, 继续重试
+  }
+}
+
+// 复制备用代码
+function copyFallback() {
+  const code = FALLBACK_JS[currentPlatform];
+  navigator.clipboard.writeText(code).then(() => {
+    alert('代码已复制! 去浏览器控制台粘贴并回车');
+  }).catch(() => {
+    const el = document.getElementById('fallback-code');
     const range = document.createRange();
-    range.selectNode(codeEl);
+    range.selectNode(el);
     window.getSelection().removeAllRanges();
     window.getSelection().addRange(range);
     document.execCommand('copy');
-    btn.textContent = '✅ 已复制！';
-    result.innerHTML = '<p class="ok">代码已复制！现在去浏览器控制台粘贴并回车。</p>';
-  }
-  setTimeout(() => {
-    btn.textContent = '📋 一键复制代码';
-    btn.style.background = '#18181b';
-  }, 3000);
+    alert('代码已复制! 去浏览器控制台粘贴并回车');
+  });
 }
 </script>
 </body>
