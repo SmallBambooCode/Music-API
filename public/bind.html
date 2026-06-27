@@ -76,18 +76,35 @@ h1{text-align:center;font-size:22px;margin:16px 0 8px}
   <p class="hint" id="qr-hint">用 <b>QQ APP</b> (不是QQ音乐APP) 扫码登录</p>
 </div>
 
-<!-- ========== 酷我账号密码登录 (酷我无扫码) ========== -->
+<!-- ========== 酷我手机验证码登录 (酷我无扫码) ========== -->
 <div class="card" id="kw-login-card" style="display:none">
-  <p class="hint" style="margin-bottom:12px;color:#b91c1c">酷我网页版暂不支持扫码登录, 请用账号密码登录:</p>
-  <div class="field">
-    <label>酷我账号 / 手机号 <span style="color:#b91c1c">*</span></label>
-    <input type="text" id="kw-username" placeholder="请输入酷我账号或手机号" autocomplete="off">
+  <p class="hint" style="margin-bottom:12px;color:#b91c1c">酷我网页版暂不支持扫码登录, 请用手机验证码登录:</p>
+
+  <!-- 步骤1: 图片验证码 -->
+  <div id="kw-step1">
+    <div class="field">
+      <label>手机号 <span style="color:#b91c1c">*</span></label>
+      <input type="text" id="kw-mobile" placeholder="请输入手机号" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>图片验证码 <span style="color:#b91c1c">*</span></label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" id="kw-imgcode" placeholder="输入右侧验证码" autocomplete="off" style="flex:1">
+        <img id="kw-captcha-img" src="" alt="点击获取验证码" onclick="kwGetCaptcha()" style="height:40px;border:1px solid #d4d4d8;border-radius:8px;cursor:pointer;background:#f4f4f5">
+      </div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:8px" onclick="kwSendSms()">发送短信验证码</button>
   </div>
-  <div class="field">
-    <label>密码 <span style="color:#b91c1c">*</span></label>
-    <input type="password" id="kw-password" placeholder="请输入密码" autocomplete="off">
+
+  <!-- 步骤2: 短信验证码 -->
+  <div id="kw-step2" style="display:none">
+    <div class="field">
+      <label>短信验证码 <span style="color:#b91c1c">*</span></label>
+      <input type="text" id="kw-smscode" placeholder="请输入收到的短信验证码" autocomplete="off">
+    </div>
+    <button class="btn btn-primary" style="margin-top:8px" onclick="kwLogin()">登录酷我</button>
   </div>
-  <button class="btn btn-primary" style="margin-top:12px" onclick="submitKwLogin()">登录酷我</button>
+
   <div id="kw-result"></div>
 </div>
 
@@ -146,12 +163,14 @@ document.querySelectorAll('.tab').forEach(tab => {
     stopPoll();
     resetUI();
     updateManualFields();
-    // 酷我无扫码, 显示账号密码登录表单; 其他平台显示扫码
+    // 酷我无扫码, 显示手机验证码登录表单; 其他平台显示扫码
     if (currentPlatform === 'kuwo') {
       document.getElementById('qr-area').style.display = 'none';
       document.getElementById('startBtn').style.display = 'none';
       document.getElementById('qr-hint').style.display = 'none';
       document.getElementById('kw-login-card').style.display = 'block';
+      // 自动获取图片验证码
+      if (!kwSessionId) kwGetCaptcha();
     } else {
       document.getElementById('qr-area').style.display = 'block';
       document.getElementById('startBtn').style.display = 'block';
@@ -239,18 +258,62 @@ async function submitManual() {
   }
 }
 
-// 酷我账号密码登录
-async function submitKwLogin() {
-  const username = document.getElementById('kw-username').value.trim();
-  const password = document.getElementById('kw-password').value.trim();
-  const result = document.getElementById('kw-result');
-  if (!username || !password) {
-    result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">请输入账号和密码</p>';
-    return;
+// ==================== 酷我手机验证码登录 (三步流程) ====================
+let kwSessionId = null;
+
+// 步骤1: 获取图片验证码
+async function kwGetCaptcha() {
+  const img = document.getElementById('kw-captcha-img');
+  img.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="40"><text x="50" y="22" text-anchor="middle" fill="#a1a1aa">加载中...</text></svg>';
+  try {
+    const data = await safeFetch(`${API_BASE}/api?action=kw_captcha`);
+    if (data.ok) {
+      kwSessionId = data.sessionId;
+      img.src = data.img;
+      document.getElementById('kw-result').innerHTML = '';
+    } else {
+      document.getElementById('kw-result').innerHTML = '<p style="color:#b91c1c;margin-top:8px">' + (data.message || '获取验证码失败') + '</p>';
+    }
+  } catch (err) {
+    document.getElementById('kw-result').innerHTML = '<p style="color:#b91c1c;margin-top:8px">网络错误: ' + err.message + '</p>';
   }
+}
+
+// 步骤2: 发送短信验证码
+async function kwSendSms() {
+  const mobile = document.getElementById('kw-mobile').value.trim();
+  const imgcode = document.getElementById('kw-imgcode').value.trim();
+  const result = document.getElementById('kw-result');
+  if (!mobile) { result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">请输入手机号</p>'; return; }
+  if (!imgcode) { result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">请输入图片验证码</p>'; return; }
+  if (!kwSessionId) { result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">请先获取图片验证码</p>'; return; }
+
+  result.innerHTML = '<p style="color:#71717a;margin-top:8px">正在发送...</p>';
+  try {
+    const data = await safeFetch(`${API_BASE}/api?action=kw_send_sms&sessionId=${kwSessionId}&mobile=${encodeURIComponent(mobile)}&verifyCode=${encodeURIComponent(imgcode)}`);
+    if (data.ok) {
+      result.innerHTML = '<p style="color:#15803d;margin-top:8px">✓ 短信验证码已发送, 请查收</p>';
+      document.getElementById('kw-step1').style.display = 'none';
+      document.getElementById('kw-step2').style.display = 'block';
+    } else {
+      result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">' + (data.message || '发送失败') + '</p>';
+      // 验证码错误时刷新图片
+      kwGetCaptcha();
+    }
+  } catch (err) {
+    result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">网络错误: ' + err.message + '</p>';
+  }
+}
+
+// 步骤3: 短信验证码登录
+async function kwLogin() {
+  const smscode = document.getElementById('kw-smscode').value.trim();
+  const result = document.getElementById('kw-result');
+  if (!smscode) { result.innerHTML = '<p style="color:#b91c1c;margin-top:8px">请输入短信验证码</p>'; return; }
+
   result.innerHTML = '<p style="color:#71717a;margin-top:8px">正在登录...</p>';
   try {
-    const data = await safeFetch(`${API_BASE}/api?action=kw_login&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`);
+    const data = await safeFetch(`${API_BASE}/api?action=kw_login&sessionId=${kwSessionId}&smsCode=${encodeURIComponent(smscode)}`);
     if (data.ok) {
       result.innerHTML = `
         <div style="margin-top:12px;padding:16px;background:#f0fdf4;border:2px dashed #86efac;border-radius:12px;text-align:center">
