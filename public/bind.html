@@ -30,13 +30,18 @@ const PLATFORMS = {
     name: 'QQ音乐',
     site: 'https://y.qq.com/',
     color: '#d946ef',
+    // QQ 音乐 cookie 非 HttpOnly, 可直接 document.cookie 读取
     js: "javascript:var uin=document.cookie.match(/uin=([^;]+)/);var key=document.cookie.match(/qqmusic_key=([^;]+)/);if(uin&&key){copy(uin[1].replace(/^o0*/,'').replace(/^o/,'')+'|'+key[1]);console.log('已复制到剪贴板:\\n'+uin[1].replace(/^o0*/,'').replace(/^o/,'')+'|'+key[1])}else{console.log('未登录QQ音乐, 请先登录 y.qq.com')}"
   },
   netease: {
     name: '网易云',
     site: 'https://music.163.com/',
     color: '#dc2626',
-    js: "javascript:var mu=document.cookie.match(/MUSIC_U=([^;]+)/);var csrf=document.cookie.match(/__csrf=([^;]+)/);if(mu&&csrf){copy(mu[1]+'|'+csrf[1]);console.log('已复制到剪贴板:\\n'+mu[1]+'|'+csrf[1])}else{console.log('未登录网易云, 请先登录 music.163.com')}"
+    // 网易云 MUSIC_U 是 HttpOnly, document.cookie 读不到
+    // 用户需要在 F12 > Application > Cookies 手动复制 MUSIC_U 和 __csrf 的值
+    manual: true,
+    manualStep: '1. 登录 music.163.com<br>2. 按 F12 打开开发者工具<br>3. 切换到 Application (应用) 标签<br>4. 左侧 Cookies → https://music.163.com<br>5. 找到 MUSIC_U, 复制它的值<br>6. 找到 __csrf, 复制它的值<br>7. 在游戏里输入: MUSIC_U的值|__csrf的值',
+    js: "javascript:var mu=document.cookie.match(/MUSIC_U=([^;]+)/);var csrf=document.cookie.match(/__csrf=([^;]+)/);if(mu&&csrf){copy(mu[1]+'|'+csrf[1]);console.log('已复制到剪贴板:\\n'+mu[1]+'|'+csrf[1])}else{console.log('MUSIC_U 是 HttpOnly, document.cookie 读不到. 请用 F12 > Application > Cookies 手动复制')}"
   },
   kugou: {
     name: '酷狗',
@@ -59,7 +64,22 @@ const meta = PLATFORMS[platform] || PLATFORMS.kugou;
 document.title = meta.name + ' 账号绑定教程';
 document.getElementById('title').textContent = meta.name + ' 账号绑定教程';
 
-document.getElementById('content').innerHTML = `
+document.getElementById('content').innerHTML = meta.manual ? `
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-text">先登录 <span class="link" onclick="window.open('${meta.site}','_blank')">${meta.site}</span></div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-text">${meta.manualStep}</div>
+  </div>
+  <hr style="margin:20px 0;border:none;border-top:1px solid #e4e4e7">
+  <p style="font-size:14px;color:#71717a">网易云的 <b>MUSIC_U</b> cookie 是 HttpOnly, JavaScript 无法读取, 只能手动复制。<br>格式: <b>MUSIC_U的值|__csrf的值</b> (用竖线 | 分隔)</p>
+  <p style="font-size:14px;color:#dc2626"><b>提示</b>: 也可以先试试下面的脚本, 如果浏览器能读到就直接复制:</p>
+  <div class="code-box" id="code">${escapeHtml(meta.js)}</div>
+  <button class="btn" id="copyBtn" onclick="copyCode()">📋 一键复制代码</button>
+  <div id="result" style="margin-top:12px"></div>
+` : `
   <div class="step">
     <div class="step-num">1</div>
     <div class="step-text">先登录 <span class="link" onclick="window.open('${meta.site}','_blank')">${meta.site}</span></div>
