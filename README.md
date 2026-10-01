@@ -44,8 +44,11 @@ GET /api?server={platform}&type={type}&id={id}
 | `song` | JSON | 单曲信息 (MetingJS 格式) |
 | `song_full` | JSON | 完整单曲 (name + url + lyric + time) |
 | `lrc` | 文本 | 歌词 (LRC 格式) |
-| `playlist` | JSON | 歌单内歌曲列表 (MetingJS 格式) |
+| `playlist` | JSON | 歌单内歌曲列表 (MetingJS 格式, 每首含 `addTime` 加入时间) |
+| `playlist_detail` | JSON | 歌单详情 + 歌曲列表 (每首含 `addTime` 加入时间) |
 | `playlist_search` | JSON | 搜索歌单 |
+
+> **`addTime` 字段**: 歌单类接口 (`playlist` / `playlist_detail`) 返回的每首歌曲含 `addTime`, 即该歌曲**被加入歌单的时间** (Unix 秒级时间戳, `0` 表示无数据)。数据取自网易云 `playlist/detail` 响应中的 `playlist.trackIds[].at` (毫秒), 本项目在封装层将其按歌曲 id 合并回歌曲列表。公开歌单无需 cookie 即可获取; 私密歌单 / 自己创建的歌单需在服务端配置 `NCM_COOKIE`。
 
 ### 特殊端点
 
